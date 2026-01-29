@@ -1,0 +1,109 @@
+// Zokrates ZKP Circuit for Vote Validity
+//
+// This circuit proves that an encrypted vote is valid without revealing the choice.
+// It proves that:
+//   1. The vote is for exactly one candidate
+//   2. The encrypted vote is correctly formed
+//   3. The voter knows the randomness used in encryption
+//
+// Public inputs:
+//   - encryptedVoteCommitment: Hash of the encrypted vote
+//   - publicKeyHash: Hash of the election public key
+//   - numCandidates: Number of valid candidates
+//
+// Private inputs:
+//   - voteChoice: The actual vote (0 to numCandidates-1)
+//   - encryptionRandomness: Randomness used in CGS encryption
+
+import "hashes/sha256/512bitPacked" as sha256packed;
+
+// Maximum number of candidates supported
+const u32 MAX_CANDIDATES = 20;
+
+// Hash function for commitments
+def hash2(field[2] a, field[2] b) -> field[2] {
+    field[4] preimage = [a[0], a[1], b[0], b[1]];
+    return sha256packed(preimage);
+}
+
+// Verify vote is in valid range [0, numCandidates)
+def verifyVoteRange(u32 vote, u32 numCandidates) -> bool {
+    // Vote must be less than number of candidates
+    bool inRange = vote < numCandidates;
+
+    // Vote must be non-negative (always true for u32)
+    return inRange;
+}
+
+// Verify vote is exactly one (unit vector property)
+// For each candidate position, the vote vector should be 0 or 1
+// and exactly one position should be 1
+def verifyUnitVector(u32 choice, u32 numCandidates) -> bool {
+    u32 mut sum = 0;
+
+    for u32 i in 0..MAX_CANDIDATES {
+        // This position gets 1 if it's the choice, 0 otherwise
+        u32 value = i == choice ? 1 : 0;
+
+        // Only count if within actual candidate range
+        sum = i < numCandidates ? sum + value : sum;
+    }
+
+    // Exactly one position should be 1
+    return sum == 1;
+}
+
+// Simulate CGS encryption commitment verification
+// In a full implementation, this would verify the actual CGS encryption
+def verifyEncryptionCommitment(
+    field[2] encryptedVoteCommitment,
+    u32 choice,
+    field[2] randomness,
+    field[2] publicKeyHash
+) -> bool {
+    // Compute expected commitment based on choice and randomness
+    // This is a simplified version - full implementation would use actual CGS
+
+    // Convert choice to field elements
+    field[2] choiceFields = [choice as field, 0];
+
+    // Hash choice with randomness
+    field[2] voteHash = hash2(choiceFields, randomness);
+
+    // Hash with public key
+    field[2] expectedCommitment = hash2(voteHash, publicKeyHash);
+
+    // Verify commitment matches
+    return (expectedCommitment[0] == encryptedVoteCommitment[0]) &&
+           (expectedCommitment[1] == encryptedVoteCommitment[1]);
+}
+
+// Main validity proof circuit
+def main(
+    // Public inputs
+    public field[2] encryptedVoteCommitment,
+    public field[2] publicKeyHash,
+    public u32 numCandidates,
+
+    // Private inputs
+    private u32 voteChoice,
+    private field[2] encryptionRandomness
+) -> bool {
+
+    // 1. Verify vote is in valid range
+    bool rangeValid = verifyVoteRange(voteChoice, numCandidates);
+
+    // 2. Verify vote is exactly one candidate (unit vector)
+    bool unitVectorValid = verifyUnitVector(voteChoice, numCandidates);
+
+    // 3. Verify encryption commitment is correctly formed
+    bool encryptionValid = verifyEncryptionCommitment(
+        encryptedVoteCommitment,
+        voteChoice,
+        encryptionRandomness,
+        publicKeyHash
+    );
+
+    // All conditions must be satisfied
+    return rangeValid && unitVectorValid && encryptionValid;
+}

@@ -1,0 +1,97 @@
+// Zokrates ZKP Circuit for Voter Eligibility
+//
+// This circuit proves that a voter is eligible without revealing their identity.
+// It implements a Merkle tree membership proof with nullifier generation.
+//
+// Public inputs:
+//   - merkleRoot: The Merkle root of the eligible voter tree
+//   - nullifier: Unique identifier to prevent double voting
+//
+// Private inputs:
+//   - voterSecret: The voter's secret key
+//   - merklePath: The sibling hashes along the path
+//   - pathIndices: The direction at each level (0=left, 1=right)
+
+import "hashes/sha256/512bitPacked" as sha256packed;
+from "utils/pack/bool/nonStrictUnpack256" import main as unpack256;
+from "utils/pack/bool/pack256" import main as pack256;
+
+// Hash two 256-bit values together
+def hash2(field[2] left, field[2] right) -> field[2] {
+    // Concatenate and hash
+    field[4] preimage = [left[0], left[1], right[0], right[1]];
+    field[2] h = sha256packed(preimage);
+    return h;
+}
+
+// Compute leaf commitment from voter secret
+def computeCommitment(field[2] secret) -> field[2] {
+    field[2] zeros = [0, 0];
+    return hash2(secret, zeros);
+}
+
+// Compute nullifier from secret and election ID
+def computeNullifier(field[2] secret, field[2] electionId) -> field[2] {
+    return hash2(secret, electionId);
+}
+
+// Verify Merkle path
+def verifyMerklePath(
+    field[2] leaf,
+    field[2][20] path,      // Support tree depth of 20
+    bool[20] indices,
+    u32 depth
+) -> field[2] {
+    field[2] mut current = leaf;
+
+    for u32 i in 0..20 {
+        field[2] sibling = path[i];
+
+        // If index is 0, current is on left; if 1, current is on right
+        field[2] left = indices[i] ? sibling : current;
+        field[2] right = indices[i] ? current : sibling;
+
+        // Only process up to actual depth
+        current = i < depth ? hash2(left, right) : current;
+    }
+
+    return current;
+}
+
+// Main eligibility proof circuit
+def main(
+    // Public inputs
+    public field[2] merkleRoot,
+    public field[2] nullifier,
+    public field[2] electionId,
+
+    // Private inputs
+    private field[2] voterSecret,
+    private field[2][20] merklePath,
+    private bool[20] pathIndices,
+    private u32 treeDepth
+) -> bool {
+
+    // 1. Compute the voter's commitment (leaf)
+    field[2] commitment = computeCommitment(voterSecret);
+
+    // 2. Verify the Merkle path from commitment to root
+    field[2] computedRoot = verifyMerklePath(
+        commitment,
+        merklePath,
+        pathIndices,
+        treeDepth
+    );
+
+    // 3. Check that computed root matches the public root
+    bool rootValid = (computedRoot[0] == merkleRoot[0]) && (computedRoot[1] == merkleRoot[1]);
+
+    // 4. Compute expected nullifier
+    field[2] expectedNullifier = computeNullifier(voterSecret, electionId);
+
+    // 5. Check that nullifier matches
+    bool nullifierValid = (expectedNullifier[0] == nullifier[0]) && (expectedNullifier[1] == nullifier[1]);
+
+    // 6. Both checks must pass
+    return rootValid && nullifierValid;
+}

@@ -1,0 +1,202 @@
+# Hyperledger Fabric Network Configuration for Voting System
+# This defines the channel configuration for the voting network
+
+Organizations:
+  - &OrdererOrg
+    Name: OrdererOrg
+    ID: OrdererMSP
+    MSPDir: crypto-config/ordererOrganizations/voting.example.com/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('OrdererMSP.member')"
+      Writers:
+        Type: Signature
+        Rule: "OR('OrdererMSP.member')"
+      Admins:
+        Type: Signature
+        Rule: "OR('OrdererMSP.admin')"
+
+  - &NEC
+    Name: NECMSP
+    ID: NECMSP
+    MSPDir: crypto-config/peerOrganizations/nec.voting.example.com/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('NECMSP.admin', 'NECMSP.peer', 'NECMSP.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('NECMSP.admin', 'NECMSP.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('NECMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('NECMSP.peer')"
+    AnchorPeers:
+      - Host: peer0.nec.voting.example.com
+        Port: 7051
+
+  - &MOIS
+    Name: MOISMSP
+    ID: MOISMSP
+    MSPDir: crypto-config/peerOrganizations/mois.voting.example.com/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('MOISMSP.admin', 'MOISMSP.peer', 'MOISMSP.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('MOISMSP.admin', 'MOISMSP.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('MOISMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('MOISMSP.peer')"
+    AnchorPeers:
+      - Host: peer0.mois.voting.example.com
+        Port: 7051
+
+  - &BAI
+    Name: BAIMSP
+    ID: BAIMSP
+    MSPDir: crypto-config/peerOrganizations/bai.voting.example.com/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('BAIMSP.admin', 'BAIMSP.peer', 'BAIMSP.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('BAIMSP.admin', 'BAIMSP.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('BAIMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('BAIMSP.peer')"
+    AnchorPeers:
+      - Host: peer0.bai.voting.example.com
+        Port: 7051
+
+Capabilities:
+  Channel: &ChannelCapabilities
+    V2_0: true
+  Orderer: &OrdererCapabilities
+    V2_0: true
+  Application: &ApplicationCapabilities
+    V2_0: true
+
+Application: &ApplicationDefaults
+  Organizations:
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+    LifecycleEndorsement:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Endorsement"
+    Endorsement:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Endorsement"
+  Capabilities:
+    <<: *ApplicationCapabilities
+
+Orderer: &OrdererDefaults
+  OrdererType: etcdraft
+  Addresses:
+    - orderer1.voting.example.com:7050
+    - orderer2.voting.example.com:7050
+    - orderer3.voting.example.com:7050
+    - orderer4.voting.example.com:7050
+    - orderer5.voting.example.com:7050
+  EtcdRaft:
+    Consenters:
+      - Host: orderer1.voting.example.com
+        Port: 7050
+        ClientTLSCert: crypto-config/ordererOrganizations/voting.example.com/orderers/orderer1.voting.example.com/tls/server.crt
+        ServerTLSCert: crypto-config/ordererOrganizations/voting.example.com/orderers/orderer1.voting.example.com/tls/server.crt
+      - Host: orderer2.voting.example.com
+        Port: 7050
+        ClientTLSCert: crypto-config/ordererOrganizations/voting.example.com/orderers/orderer2.voting.example.com/tls/server.crt
+        ServerTLSCert: crypto-config/ordererOrganizations/voting.example.com/orderers/orderer2.voting.example.com/tls/server.crt
+      - Host: orderer3.voting.example.com
+        Port: 7050
+        ClientTLSCert: crypto-config/ordererOrganizations/voting.example.com/orderers/orderer3.voting.example.com/tls/server.crt
+        ServerTLSCert: crypto-config/ordererOrganizations/voting.example.com/orderers/orderer3.voting.example.com/tls/server.crt
+      - Host: orderer4.voting.example.com
+        Port: 7050
+        ClientTLSCert: crypto-config/ordererOrganizations/voting.example.com/orderers/orderer4.voting.example.com/tls/server.crt
+        ServerTLSCert: crypto-config/ordererOrganizations/voting.example.com/orderers/orderer4.voting.example.com/tls/server.crt
+      - Host: orderer5.voting.example.com
+        Port: 7050
+        ClientTLSCert: crypto-config/ordererOrganizations/voting.example.com/orderers/orderer5.voting.example.com/tls/server.crt
+        ServerTLSCert: crypto-config/ordererOrganizations/voting.example.com/orderers/orderer5.voting.example.com/tls/server.crt
+  BatchTimeout: 2s
+  BatchSize:
+    MaxMessageCount: 500
+    AbsoluteMaxBytes: 10 MB
+    PreferredMaxBytes: 2 MB
+  Organizations:
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+    BlockValidation:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+
+Channel: &ChannelDefaults
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+  Capabilities:
+    <<: *ChannelCapabilities
+
+Profiles:
+  VotingOrdererGenesis:
+    <<: *ChannelDefaults
+    Orderer:
+      <<: *OrdererDefaults
+      Organizations:
+        - *OrdererOrg
+      Capabilities:
+        <<: *OrdererCapabilities
+    Consortiums:
+      VotingConsortium:
+        Organizations:
+          - *NEC
+          - *MOIS
+          - *BAI
+
+  VotingChannel:
+    Consortium: VotingConsortium
+    <<: *ChannelDefaults
+    Application:
+      <<: *ApplicationDefaults
+      Organizations:
+        - *NEC
+        - *MOIS
+        - *BAI
+      Capabilities:
+        <<: *ApplicationCapabilities

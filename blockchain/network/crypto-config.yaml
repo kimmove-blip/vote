@@ -1,0 +1,65 @@
+# Crypto configuration for the Voting Network
+# This generates the cryptographic material for all organizations
+
+OrdererOrgs:
+  - Name: Orderer
+    Domain: voting.example.com
+    EnableNodeOUs: true
+    Specs:
+      - Hostname: orderer1
+        SANS:
+          - localhost
+          - 127.0.0.1
+      - Hostname: orderer2
+        SANS:
+          - localhost
+          - 127.0.0.1
+      - Hostname: orderer3
+        SANS:
+          - localhost
+          - 127.0.0.1
+      - Hostname: orderer4
+        SANS:
+          - localhost
+          - 127.0.0.1
+      - Hostname: orderer5
+        SANS:
+          - localhost
+          - 127.0.0.1
+
+PeerOrgs:
+  # National Election Commission (NEC)
+  - Name: NEC
+    Domain: nec.voting.example.com
+    EnableNodeOUs: true
+    Template:
+      Count: 2
+      SANS:
+        - localhost
+        - 127.0.0.1
+    Users:
+      Count: 5
+
+  # Ministry of the Interior and Safety (MOIS)
+  - Name: MOIS
+    Domain: mois.voting.example.com
+    EnableNodeOUs: true
+    Template:
+      Count: 2
+      SANS:
+        - localhost
+        - 127.0.0.1
+    Users:
+      Count: 3
+
+  # Board of Audit and Inspection (BAI)
+  - Name: BAI
+    Domain: bai.voting.example.com
+    EnableNodeOUs: true
+    Template:
+      Count: 2
+      SANS:
+        - localhost
+        - 127.0.0.1
+    Users:
+      Count: 3

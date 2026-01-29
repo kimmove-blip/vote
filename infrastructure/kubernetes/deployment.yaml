@@ -1,0 +1,324 @@
+# Kubernetes Deployment Configuration for Voting System
+
+---
+# Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: voting-system
+  labels:
+    name: voting-system
+    istio-injection: enabled
+
+---
+# ConfigMap for application configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: voting-config
+  namespace: voting-system
+data:
+  APP_NAME: "Blockchain Voting System"
+  APP_VERSION: "1.0.0"
+  LOG_LEVEL: "INFO"
+  FABRIC_CHANNEL_NAME: "votingchannel"
+  FABRIC_CHAINCODE_NAME: "votecontract"
+
+---
+# Secret for sensitive configuration (values should be from AWS Secrets Manager)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: voting-secrets
+  namespace: voting-system
+type: Opaque
+stringData:
+  DATABASE_URL: "postgresql+asyncpg://voting_admin:CHANGE_ME@voting-db.xxx.ap-northeast-2.rds.amazonaws.com:5432/voting_db"
+  REDIS_URL: "redis://voting-redis.xxx.cache.amazonaws.com:6379/0"
+  JWT_SECRET_KEY: "CHANGE_ME_TO_SECURE_KEY"
+
+---
+# API Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: voting-api
+  namespace: voting-system
+  labels:
+    app: voting-api
+    version: v1
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: voting-api
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+  template:
+    metadata:
+      labels:
+        app: voting-api
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: voting-api
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+        - name: api
+          image: voting-api:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: voting-config
+            - secretRef:
+                name: voting-secrets
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "2000m"
+              memory: "2Gi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: fabric-config
+              mountPath: /etc/fabric
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: fabric-config
+          secret:
+            secretName: fabric-connection
+
+---
+# API Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: voting-api
+  namespace: voting-system
+  labels:
+    app: voting-api
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 8000
+      protocol: TCP
+  selector:
+    app: voting-api
+
+---
+# Horizontal Pod Autoscaler
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: voting-api-hpa
+  namespace: voting-system
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: voting-api
+  minReplicas: 5
+  maxReplicas: 50
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 60
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 10
+          periodSeconds: 60
+
+---
+# Pod Disruption Budget
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: voting-api-pdb
+  namespace: voting-system
+spec:
+  minAvailable: 3
+  selector:
+    matchLabels:
+      app: voting-api
+
+---
+# Service Account
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: voting-api
+  namespace: voting-system
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT_ID:role/voting-api-role
+
+---
+# Ingress (using AWS ALB Ingress Controller)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: voting-api-ingress
+  namespace: voting-system
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:ap-northeast-2:ACCOUNT_ID:certificate/CERT_ID
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: "15"
+    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: "5"
+    alb.ingress.kubernetes.io/healthy-threshold-count: "2"
+    alb.ingress.kubernetes.io/unhealthy-threshold-count: "2"
+spec:
+  rules:
+    - host: api.voting.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: voting-api
+                port:
+                  number: 80
+
+---
+# Network Policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: voting-api-network-policy
+  namespace: voting-system
+spec:
+  podSelector:
+    matchLabels:
+      app: voting-api
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: istio-system
+        - podSelector:
+            matchLabels:
+              app: istio-ingressgateway
+      ports:
+        - protocol: TCP
+          port: 8000
+  egress:
+    # Allow DNS
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+    # Allow RDS
+    - to:
+        - ipBlock:
+            cidr: 10.0.0.0/16
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Allow Redis
+    - to:
+        - ipBlock:
+            cidr: 10.0.0.0/16
+      ports:
+        - protocol: TCP
+          port: 6379
+    # Allow Fabric peers
+    - to:
+        - podSelector:
+            matchLabels:
+              app: fabric-peer
+      ports:
+        - protocol: TCP
+          port: 7051
+
+---
+# Priority Class for voting workloads
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: voting-critical
+value: 1000000
+globalDefault: false
+description: "Priority class for critical voting system components"
+
+---
+# Resource Quota
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: voting-quota
+  namespace: voting-system
+spec:
+  hard:
+    requests.cpu: "100"
+    requests.memory: "200Gi"
+    limits.cpu: "200"
+    limits.memory: "400Gi"
+    pods: "200"
+    services: "20"
+    secrets: "50"
+    configmaps: "50"
