@@ -5,12 +5,42 @@ import uuid
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import Column, String, DateTime, Text, Integer, ForeignKey, Enum
+from sqlalchemy import Column, String, DateTime, Text, Integer, ForeignKey, Enum, TypeDecorator, CHAR
 from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.postgresql import UUID
 import enum
 
 from app.core.database import Base
+
+
+class GUID(TypeDecorator):
+    """Platform-independent GUID type for SQLite and PostgreSQL."""
+    impl = CHAR
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == 'postgresql':
+            from sqlalchemy.dialects.postgresql import UUID
+            return dialect.type_descriptor(UUID())
+        else:
+            return dialect.type_descriptor(CHAR(36))
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return value
+        elif dialect.name == 'postgresql':
+            return str(value)
+        else:
+            if isinstance(value, uuid.UUID):
+                return str(value)
+            else:
+                return str(uuid.UUID(value))
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return value
+        if not isinstance(value, uuid.UUID):
+            return uuid.UUID(value)
+        return value
 
 
 class ElectionStatus(str, enum.Enum):
@@ -39,7 +69,7 @@ class Election(Base):
 
     __tablename__ = "elections"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
     title = Column(String(200), nullable=False)
     description = Column(Text, nullable=True)
     status = Column(
@@ -76,7 +106,7 @@ class Election(Base):
     # Audit trail
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    created_by = Column(UUID(as_uuid=True), nullable=True)
+    created_by = Column(GUID(), nullable=True)
 
     # Relationships
     candidates = relationship("Candidate", back_populates="election", cascade="all, delete-orphan")
@@ -109,9 +139,9 @@ class Candidate(Base):
 
     __tablename__ = "candidates"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
     election_id = Column(
-        UUID(as_uuid=True),
+        GUID(),
         ForeignKey("elections.id", ondelete="CASCADE"),
         nullable=False
     )

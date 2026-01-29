@@ -20,8 +20,8 @@ class Settings(BaseSettings):
     PORT: int = 8000
     WORKERS: int = 4
 
-    # Database
-    DATABASE_URL: str = "postgresql+asyncpg://postgres:password@localhost:5432/voting_db"
+    # Database (SQLite for dev, PostgreSQL for production)
+    DATABASE_URL: str = "sqlite+aiosqlite:///./vote.db"
     DATABASE_POOL_SIZE: int = 20
     DATABASE_MAX_OVERFLOW: int = 10
 
@@ -68,7 +68,7 @@ class Settings(BaseSettings):
     RATE_LIMIT_WINDOW_SECONDS: int = 60
 
     # CORS
-    CORS_ORIGINS: List[str] = ["https://voting.example.com", "http://localhost:3000"]
+    CORS_ORIGINS: List[str] = ["https://vote.kims-ai.com", "http://localhost:3000", "http://localhost:3002"]
 
     # Logging
     LOG_LEVEL: str = "INFO"

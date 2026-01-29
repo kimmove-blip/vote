@@ -6,9 +6,9 @@ from datetime import datetime
 
 from sqlalchemy import Column, String, DateTime, Boolean, ForeignKey, Text, Integer, JSON
 from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.postgresql import UUID
 
 from app.core.database import Base
+from app.models.election import GUID
 
 
 class VoteToken(Base):
@@ -19,9 +19,9 @@ class VoteToken(Base):
 
     __tablename__ = "vote_tokens"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
     election_id = Column(
-        UUID(as_uuid=True),
+        GUID(),
         ForeignKey("elections.id", ondelete="CASCADE"),
         nullable=False
     )
@@ -62,9 +62,9 @@ class VoteReceipt(Base):
 
     __tablename__ = "vote_receipts"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
     election_id = Column(
-        UUID(as_uuid=True),
+        GUID(),
         ForeignKey("elections.id", ondelete="CASCADE"),
         nullable=False
     )
@@ -110,9 +110,9 @@ class VoterParticipation(Base):
 
     __tablename__ = "voter_participations"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
     election_id = Column(
-        UUID(as_uuid=True),
+        GUID(),
         ForeignKey("elections.id", ondelete="CASCADE"),
         nullable=False
     )
@@ -146,9 +146,9 @@ class VoteAuditLog(Base):
 
     __tablename__ = "vote_audit_logs"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
     election_id = Column(
-        UUID(as_uuid=True),
+        GUID(),
         ForeignKey("elections.id", ondelete="CASCADE"),
         nullable=False
     )

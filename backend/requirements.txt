@@ -21,10 +21,10 @@ pydantic-settings==2.1.0
 cryptography==41.0.7
 pycryptodome==3.20.0
 py-ecc==6.0.0
-gmpy2==2.1.5
+# gmpy2==2.1.5  # Optional: requires libgmp-dev
 
-# Hyperledger Fabric SDK
-hfc==1.0.0
+# Hyperledger Fabric SDK (optional, use mock in dev)
+# hfc==1.0.0  # Not available on PyPI, use fabric-sdk-py or mock
 
 # HTTP client
 httpx==0.26.0

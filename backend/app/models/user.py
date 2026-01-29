@@ -5,11 +5,11 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import Column, String, DateTime, Boolean, Text, Enum
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy import Column, String, DateTime, Boolean, Text, Enum, JSON
 import enum
 
 from app.core.database import Base
+from app.models.election import GUID
 
 
 class UserRole(str, enum.Enum):
@@ -28,11 +28,11 @@ class User(Base):
 
     __tablename__ = "users"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
 
     # DID-based identity
     did = Column(String(200), unique=True, nullable=False, index=True)
-    did_document = Column(JSONB, nullable=True)
+    did_document = Column(JSON, nullable=True)
 
     # Basic info (from verified DID claims)
     display_name = Column(String(100), nullable=True)
@@ -44,7 +44,7 @@ class User(Base):
     is_verified = Column(Boolean, default=False, nullable=False)
 
     # FIDO2 credentials
-    fido_credentials = Column(JSONB, nullable=True)
+    fido_credentials = Column(JSON, nullable=True)
 
     # Voter eligibility (encrypted/hashed)
     eligibility_merkle_proof = Column(Text, nullable=True)
