@@ -1,10 +1,10 @@
 """
 Vote-related Pydantic schemas.
 """
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 from uuid import UUID
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 
 
 class VoteTokenRequest(BaseModel):
@@ -20,6 +20,18 @@ class VoteTokenResponse(BaseModel):
     expires_at: datetime = Field(..., description="Token expiration time")
     election_id: UUID = Field(..., description="Election ID")
     election_public_key: str = Field(..., description="Election public key for encryption")
+    # 투표 방식 정보
+    voting_mode: str = Field(..., description="투표 방식")
+    max_candidates_per_voter: int = Field(default=1, description="투표 가능한 최대 후보 수")
+    max_votes_per_candidate: int = Field(default=1, description="후보당 최대 중복 투표 수")
+    current_voting_period: Optional[int] = Field(None, description="현재 투표 기간 (PERIODIC_RESET)")
+    remaining_votes: Optional[int] = Field(None, description="남은 투표 수")
+
+
+class CandidateVoteSelection(BaseModel):
+    """Single candidate vote selection."""
+    candidate_id: UUID = Field(..., description="후보 ID")
+    votes: int = Field(default=1, ge=1, description="해당 후보에게 투표할 수 (중복 투표 시)")
 
 
 class VoteSubmitRequest(BaseModel):
@@ -35,6 +47,12 @@ class VoteSubmitRequest(BaseModel):
     encrypted_vote: str = Field(
         ...,
         description="CGS-encrypted vote ciphertext"
+    )
+
+    # 후보 선택 (MULTI_LIMITED 모드용)
+    candidate_selections: Optional[List[CandidateVoteSelection]] = Field(
+        None,
+        description="후보 선택 목록 (MULTI_LIMITED 모드)"
     )
 
     # Nullifier for double-voting prevention
@@ -114,6 +132,16 @@ class VoteStatusResponse(BaseModel):
         None,
         description="Verification code if voted"
     )
+    # 투표 방식별 상태
+    voting_mode: str = Field(..., description="투표 방식")
+    current_period: Optional[int] = Field(None, description="현재 투표 기간")
+    can_vote_again: bool = Field(default=False, description="재투표 가능 여부")
+    votes_cast_in_period: int = Field(default=0, description="현재 기간 투표 수")
+    max_votes_allowed: int = Field(default=1, description="최대 투표 가능 수")
+    next_vote_available_at: Optional[datetime] = Field(
+        None,
+        description="다음 투표 가능 시간 (PERIODIC_RESET)"
+    )
 
 
 class BallotResponse(BaseModel):
@@ -129,6 +157,12 @@ class BallotResponse(BaseModel):
     )
     start_time: datetime = Field(..., description="Election start time")
     end_time: datetime = Field(..., description="Election end time")
+    # 투표 방식 정보
+    voting_mode: str = Field(..., description="투표 방식")
+    max_candidates_per_voter: int = Field(default=1, description="투표 가능한 최대 후보 수")
+    max_votes_per_candidate: int = Field(default=1, description="후보당 최대 중복 투표 수")
+    reset_interval_hours: Optional[int] = Field(None, description="투표권 리셋 주기 (시간)")
+    current_voting_period: Optional[int] = Field(None, description="현재 투표 기간")
 
 
 class EncryptedVote(BaseModel):

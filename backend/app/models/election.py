@@ -24,6 +24,16 @@ class ElectionStatus(str, enum.Enum):
     CANCELLED = "cancelled"
 
 
+class VotingMode(str, enum.Enum):
+    """Voting mode enumeration."""
+    # 전통적인 1인 1투표
+    SINGLE = "single"
+    # 복수 후보 투표 (n명까지, 후보당 m번까지 중복 허용)
+    MULTI_LIMITED = "multi_limited"
+    # 일정 시간마다 투표권 리셋 (기존 투표는 유효)
+    PERIODIC_RESET = "periodic_reset"
+
+
 class Election(Base):
     """Election model representing a voting event."""
 
@@ -41,6 +51,19 @@ class Election(Base):
     # Timing
     start_time = Column(DateTime(timezone=True), nullable=True)
     end_time = Column(DateTime(timezone=True), nullable=True)
+
+    # Voting mode configuration
+    voting_mode = Column(
+        Enum(VotingMode),
+        default=VotingMode.SINGLE,
+        nullable=False
+    )
+    # MULTI_LIMITED: 투표할 수 있는 최대 후보 수
+    max_candidates_per_voter = Column(Integer, default=1, nullable=False)
+    # MULTI_LIMITED: 후보당 최대 중복 투표 수
+    max_votes_per_candidate = Column(Integer, default=1, nullable=False)
+    # PERIODIC_RESET: 투표권 리셋 주기 (시간 단위)
+    reset_interval_hours = Column(Integer, default=24, nullable=True)
 
     # Cryptographic parameters
     voter_merkle_root = Column(String(66), nullable=True)

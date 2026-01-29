@@ -27,17 +27,26 @@ type VoteContract struct {
 	contractapi.Contract
 }
 
+// CandidateSelection represents a single candidate vote
+type CandidateSelection struct {
+	CandidateID string `json:"candidateId"`
+	Votes       int    `json:"votes"`
+}
+
 // Vote represents an encrypted vote record
 type Vote struct {
-	ElectionID          string    `json:"electionId"`
-	EncryptedVote       string    `json:"encryptedVote"`
-	EncryptedVoteHash   string    `json:"encryptedVoteHash"`
-	Nullifier           string    `json:"nullifier"`
-	EligibilityProofHash string   `json:"eligibilityProofHash"`
-	ValidityProofHash   string    `json:"validityProofHash"`
-	Timestamp           time.Time `json:"timestamp"`
-	TxID                string    `json:"txId"`
-	BlockNumber         uint64    `json:"blockNumber"`
+	ElectionID           string               `json:"electionId"`
+	EncryptedVote        string               `json:"encryptedVote"`
+	EncryptedVoteHash    string               `json:"encryptedVoteHash"`
+	Nullifier            string               `json:"nullifier"`
+	EligibilityProofHash string               `json:"eligibilityProofHash"`
+	ValidityProofHash    string               `json:"validityProofHash"`
+	Timestamp            time.Time            `json:"timestamp"`
+	TxID                 string               `json:"txId"`
+	BlockNumber          uint64               `json:"blockNumber"`
+	// 투표 방식별 추가 필드
+	VotingPeriod         int                  `json:"votingPeriod"`
+	CandidateSelections  []CandidateSelection `json:"candidateSelections,omitempty"`
 }
 
 // VoteReceipt is returned after a successful vote
@@ -50,6 +59,15 @@ type VoteReceipt struct {
 	Timestamp         time.Time `json:"timestamp"`
 }
 
+// VotingMode defines the voting mode type
+type VotingMode string
+
+const (
+	VotingModeSingle        VotingMode = "single"         // 전통적 1인 1투표
+	VotingModeMultiLimited  VotingMode = "multi_limited"  // 복수 후보 투표 (제한 있음)
+	VotingModePeriodicReset VotingMode = "periodic_reset" // 주기적 리셋 투표
+)
+
 // Election represents an election configuration
 type Election struct {
 	ID              string    `json:"id"`
@@ -60,6 +78,22 @@ type Election struct {
 	StartTime       time.Time `json:"startTime"`
 	EndTime         time.Time `json:"endTime"`
 	CreatedAt       time.Time `json:"createdAt"`
+	// 투표 방식 설정
+	VotingMode             VotingMode `json:"votingMode"`
+	MaxCandidatesPerVoter  int        `json:"maxCandidatesPerVoter"`  // MULTI_LIMITED
+	MaxVotesPerCandidate   int        `json:"maxVotesPerCandidate"`   // MULTI_LIMITED
+	ResetIntervalHours     int        `json:"resetIntervalHours"`     // PERIODIC_RESET
+}
+
+// VoterParticipation tracks votes per voter per period
+type VoterParticipation struct {
+	VoterHash        string         `json:"voterHash"`
+	ElectionID       string         `json:"electionId"`
+	VotingPeriod     int            `json:"votingPeriod"`
+	VotesByCandidate map[string]int `json:"votesByCandidate"`
+	TotalVotesCast   int            `json:"totalVotesCast"`
+	FirstVoteAt      time.Time      `json:"firstVoteAt"`
+	LastVoteAt       time.Time      `json:"lastVoteAt"`
 }
 
 // TallyResult represents the tally for an election
@@ -98,6 +132,24 @@ func (v *VoteContract) CreateElection(
 	startTimeStr string,
 	endTimeStr string,
 ) error {
+	return v.CreateElectionWithMode(ctx, electionID, title, voterMerkleRoot, publicKey,
+		startTimeStr, endTimeStr, string(VotingModeSingle), 1, 1, 24)
+}
+
+// CreateElectionWithMode creates a new election with voting mode configuration
+func (v *VoteContract) CreateElectionWithMode(
+	ctx contractapi.TransactionContextInterface,
+	electionID string,
+	title string,
+	voterMerkleRoot string,
+	publicKey string,
+	startTimeStr string,
+	endTimeStr string,
+	votingMode string,
+	maxCandidatesPerVoter int,
+	maxVotesPerCandidate int,
+	resetIntervalHours int,
+) error {
 	// Check if election already exists
 	existing, err := ctx.GetStub().GetState(electionKey(electionID))
 	if err != nil {
@@ -117,15 +169,36 @@ func (v *VoteContract) CreateElection(
 		return fmt.Errorf("invalid end time: %v", err)
 	}
 
+	// Validate voting mode
+	mode := VotingMode(votingMode)
+	if mode != VotingModeSingle && mode != VotingModeMultiLimited && mode != VotingModePeriodicReset {
+		mode = VotingModeSingle
+	}
+
+	// Set defaults
+	if maxCandidatesPerVoter < 1 {
+		maxCandidatesPerVoter = 1
+	}
+	if maxVotesPerCandidate < 1 {
+		maxVotesPerCandidate = 1
+	}
+	if resetIntervalHours < 1 {
+		resetIntervalHours = 24
+	}
+
 	election := Election{
-		ID:              electionID,
-		Title:           title,
-		Status:          "pending",
-		VoterMerkleRoot: voterMerkleRoot,
-		PublicKey:       publicKey,
-		StartTime:       startTime,
-		EndTime:         endTime,
-		CreatedAt:       time.Now(),
+		ID:                    electionID,
+		Title:                 title,
+		Status:                "pending",
+		VoterMerkleRoot:       voterMerkleRoot,
+		PublicKey:             publicKey,
+		StartTime:             startTime,
+		EndTime:               endTime,
+		CreatedAt:             time.Now(),
+		VotingMode:            mode,
+		MaxCandidatesPerVoter: maxCandidatesPerVoter,
+		MaxVotesPerCandidate:  maxVotesPerCandidate,
+		ResetIntervalHours:    resetIntervalHours,
 	}
 
 	electionJSON, err := json.Marshal(election)
@@ -174,8 +247,7 @@ func (v *VoteContract) ActivateElection(
 	return ctx.GetStub().PutState(electionKey(electionID), updatedJSON)
 }
 
-// CastVote records an encrypted vote on the blockchain
-// This is the core voting function
+// CastVote records an encrypted vote on the blockchain (backward compatible)
 func (v *VoteContract) CastVote(
 	ctx contractapi.TransactionContextInterface,
 	electionID string,
@@ -183,6 +255,22 @@ func (v *VoteContract) CastVote(
 	nullifier string,
 	eligibilityProofHash string,
 	validityProofHash string,
+) (*VoteReceipt, error) {
+	return v.CastVoteWithMode(ctx, electionID, encryptedVote, nullifier,
+		eligibilityProofHash, validityProofHash, "", "", 0)
+}
+
+// CastVoteWithMode records an encrypted vote with voting mode support
+func (v *VoteContract) CastVoteWithMode(
+	ctx contractapi.TransactionContextInterface,
+	electionID string,
+	encryptedVote string,
+	nullifier string,
+	eligibilityProofHash string,
+	validityProofHash string,
+	voterHash string,
+	candidateSelectionsJSON string,
+	votingPeriod int,
 ) (*VoteReceipt, error) {
 	// 1. Verify election exists and is active
 	electionJSON, err := ctx.GetStub().GetState(electionKey(electionID))
@@ -211,24 +299,63 @@ func (v *VoteContract) CastVote(
 		return nil, fmt.Errorf("election has ended")
 	}
 
-	// 2. Check nullifier hasn't been used (double-voting prevention)
-	nullifierKey := voteKey(electionID, nullifier)
-	existingVote, err := ctx.GetStub().GetState(nullifierKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to check nullifier: %v", err)
-	}
-	if existingVote != nil {
-		return nil, fmt.Errorf("vote already submitted (duplicate nullifier)")
+	// 2. Calculate current voting period for PERIODIC_RESET mode
+	currentPeriod := 0
+	if election.VotingMode == VotingModePeriodicReset && election.ResetIntervalHours > 0 {
+		elapsed := now.Sub(election.StartTime)
+		currentPeriod = int(elapsed.Hours()) / election.ResetIntervalHours
 	}
 
-	// 3. Verify ZKP proofs (off-chain verification assumed)
-	// In production, integrate with a ZKP verifier contract or library
-	// The proofs are verified by the backend before submission
+	// 3. Check voting eligibility based on mode
+	if election.VotingMode == VotingModeSingle {
+		// Traditional: Check nullifier hasn't been used
+		nullifierKey := voteKey(electionID, nullifier)
+		existingVote, err := ctx.GetStub().GetState(nullifierKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check nullifier: %v", err)
+		}
+		if existingVote != nil {
+			return nil, fmt.Errorf("vote already submitted (duplicate nullifier)")
+		}
+	} else if voterHash != "" {
+		// Multi-limited or Periodic reset: Check participation record
+		participationKey := voterParticipationKey(electionID, voterHash, currentPeriod)
+		participationJSON, err := ctx.GetStub().GetState(participationKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check participation: %v", err)
+		}
 
-	// 4. Compute encrypted vote hash
+		if participationJSON != nil {
+			var participation VoterParticipation
+			if err := json.Unmarshal(participationJSON, &participation); err != nil {
+				return nil, err
+			}
+
+			if election.VotingMode == VotingModePeriodicReset {
+				// Already voted in this period
+				return nil, fmt.Errorf("already voted in this period (%d)", currentPeriod)
+			} else if election.VotingMode == VotingModeMultiLimited {
+				// Check if max votes reached
+				maxTotal := election.MaxCandidatesPerVoter * election.MaxVotesPerCandidate
+				if participation.TotalVotesCast >= maxTotal {
+					return nil, fmt.Errorf("maximum votes (%d) reached", maxTotal)
+				}
+			}
+		}
+	}
+
+	// 4. Parse candidate selections for MULTI_LIMITED mode
+	var candidateSelections []CandidateSelection
+	if candidateSelectionsJSON != "" {
+		if err := json.Unmarshal([]byte(candidateSelectionsJSON), &candidateSelections); err != nil {
+			return nil, fmt.Errorf("invalid candidate selections: %v", err)
+		}
+	}
+
+	// 5. Compute encrypted vote hash
 	encryptedVoteHash := hashString(encryptedVote)
 
-	// 5. Get transaction context
+	// 6. Get transaction context
 	txID := ctx.GetStub().GetTxID()
 	txTimestamp, err := ctx.GetStub().GetTxTimestamp()
 	if err != nil {
@@ -236,17 +363,19 @@ func (v *VoteContract) CastVote(
 	}
 	timestamp := time.Unix(txTimestamp.Seconds, int64(txTimestamp.Nanos))
 
-	// 6. Create vote record
+	// 7. Create vote record
 	vote := Vote{
-		ElectionID:          electionID,
-		EncryptedVote:       encryptedVote,
-		EncryptedVoteHash:   encryptedVoteHash,
-		Nullifier:           nullifier,
+		ElectionID:           electionID,
+		EncryptedVote:        encryptedVote,
+		EncryptedVoteHash:    encryptedVoteHash,
+		Nullifier:            nullifier,
 		EligibilityProofHash: eligibilityProofHash,
-		ValidityProofHash:   validityProofHash,
-		Timestamp:           timestamp,
-		TxID:                txID,
-		BlockNumber:         0, // Will be set after block confirmation
+		ValidityProofHash:    validityProofHash,
+		Timestamp:            timestamp,
+		TxID:                 txID,
+		BlockNumber:          0,
+		VotingPeriod:         currentPeriod,
+		CandidateSelections:  candidateSelections,
 	}
 
 	voteJSON, err := json.Marshal(vote)
@@ -254,36 +383,46 @@ func (v *VoteContract) CastVote(
 		return nil, err
 	}
 
-	// 7. Store vote
+	// 8. Store vote
+	nullifierKey := voteKey(electionID, nullifier)
 	if err := ctx.GetStub().PutState(nullifierKey, voteJSON); err != nil {
 		return nil, fmt.Errorf("failed to store vote: %v", err)
 	}
 
-	// 8. Update vote index for the election
+	// 9. Update voter participation (for MULTI_LIMITED and PERIODIC_RESET)
+	if voterHash != "" && election.VotingMode != VotingModeSingle {
+		if err := v.updateVoterParticipation(ctx, electionID, voterHash, currentPeriod, candidateSelections); err != nil {
+			return nil, fmt.Errorf("failed to update participation: %v", err)
+		}
+	}
+
+	// 10. Update vote index for the election
 	if err := v.addVoteToIndex(ctx, electionID, nullifier); err != nil {
 		return nil, fmt.Errorf("failed to update vote index: %v", err)
 	}
 
-	// 9. Add to bulletin board
+	// 11. Add to bulletin board
 	if err := v.addBulletinBoardEntry(ctx, electionID, "vote_cast", encryptedVoteHash); err != nil {
 		return nil, fmt.Errorf("failed to update bulletin board: %v", err)
 	}
 
-	// 10. Emit event
-	eventPayload := map[string]string{
+	// 12. Emit event
+	eventPayload := map[string]interface{}{
 		"electionId":        electionID,
 		"encryptedVoteHash": encryptedVoteHash,
 		"txId":              txID,
+		"votingMode":        election.VotingMode,
+		"votingPeriod":      currentPeriod,
 	}
 	eventJSON, _ := json.Marshal(eventPayload)
 	if err := ctx.GetStub().SetEvent("VoteCast", eventJSON); err != nil {
 		return nil, fmt.Errorf("failed to emit event: %v", err)
 	}
 
-	// 11. Generate verification code
+	// 13. Generate verification code
 	verificationCode := generateVerificationCode(txID, encryptedVoteHash)
 
-	// 12. Return receipt
+	// 14. Return receipt
 	return &VoteReceipt{
 		Success:           true,
 		VerificationCode:  verificationCode,
@@ -292,6 +431,87 @@ func (v *VoteContract) CastVote(
 		BlockNumber:       0,
 		Timestamp:         timestamp,
 	}, nil
+}
+
+// updateVoterParticipation updates or creates a voter participation record
+func (v *VoteContract) updateVoterParticipation(
+	ctx contractapi.TransactionContextInterface,
+	electionID string,
+	voterHash string,
+	votingPeriod int,
+	selections []CandidateSelection,
+) error {
+	participationKey := voterParticipationKey(electionID, voterHash, votingPeriod)
+	participationJSON, err := ctx.GetStub().GetState(participationKey)
+	if err != nil {
+		return err
+	}
+
+	var participation VoterParticipation
+	now := time.Now()
+
+	if participationJSON != nil {
+		if err := json.Unmarshal(participationJSON, &participation); err != nil {
+			return err
+		}
+		participation.LastVoteAt = now
+	} else {
+		participation = VoterParticipation{
+			VoterHash:        voterHash,
+			ElectionID:       electionID,
+			VotingPeriod:     votingPeriod,
+			VotesByCandidate: make(map[string]int),
+			TotalVotesCast:   0,
+			FirstVoteAt:      now,
+			LastVoteAt:       now,
+		}
+	}
+
+	// Update vote counts
+	votesInThisSubmission := 0
+	for _, selection := range selections {
+		if participation.VotesByCandidate == nil {
+			participation.VotesByCandidate = make(map[string]int)
+		}
+		participation.VotesByCandidate[selection.CandidateID] += selection.Votes
+		votesInThisSubmission += selection.Votes
+	}
+
+	if votesInThisSubmission == 0 {
+		votesInThisSubmission = 1 // Default 1 vote if no selections
+	}
+	participation.TotalVotesCast += votesInThisSubmission
+
+	updatedJSON, err := json.Marshal(participation)
+	if err != nil {
+		return err
+	}
+
+	return ctx.GetStub().PutState(participationKey, updatedJSON)
+}
+
+// GetVoterParticipation retrieves voter participation status
+func (v *VoteContract) GetVoterParticipation(
+	ctx contractapi.TransactionContextInterface,
+	electionID string,
+	voterHash string,
+	votingPeriod int,
+) (*VoterParticipation, error) {
+	participationKey := voterParticipationKey(electionID, voterHash, votingPeriod)
+	participationJSON, err := ctx.GetStub().GetState(participationKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read participation: %v", err)
+	}
+	if participationJSON == nil {
+		return nil, nil // No participation yet
+	}
+
+	var participation VoterParticipation
+	if err := json.Unmarshal(participationJSON, &participation); err != nil {
+		return nil, err
+	}
+
+	return &participation, nil
 }
 
 // GetVote retrieves a vote by nullifier
@@ -635,6 +855,10 @@ func tallyKey(electionID string) string {
 
 func bulletinBoardKey(electionID string) string {
 	return fmt.Sprintf("bulletinboard:%s", electionID)
+}
+
+func voterParticipationKey(electionID, voterHash string, votingPeriod int) string {
+	return fmt.Sprintf("participation:%s:%s:%d", electionID, voterHash, votingPeriod)
 }
 
 func hashString(s string) string {

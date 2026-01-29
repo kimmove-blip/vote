@@ -4,7 +4,7 @@ Vote-related database models.
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Column, String, DateTime, Boolean, ForeignKey, Text
+from sqlalchemy import Column, String, DateTime, Boolean, ForeignKey, Text, Integer, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 
@@ -72,6 +72,13 @@ class VoteReceipt(Base):
     # Human-readable verification code
     verification_code = Column(String(20), unique=True, nullable=False, index=True)
 
+    # Voting period (for PERIODIC_RESET mode)
+    voting_period = Column(Integer, default=0, nullable=False)
+
+    # Candidate selections (JSON array of candidate IDs with vote counts)
+    # Format: [{"candidate_id": "uuid", "votes": 1}, ...]
+    candidate_selections = Column(JSON, nullable=True)
+
     # Cryptographic references
     encrypted_vote_hash = Column(String(66), nullable=False)
     nullifier_hash = Column(String(66), nullable=False, index=True)
@@ -93,6 +100,42 @@ class VoteReceipt(Base):
 
     def __repr__(self) -> str:
         return f"<VoteReceipt(id={self.id}, code='{self.verification_code}')>"
+
+
+class VoterParticipation(Base):
+    """
+    Track voter participation per election and period.
+    Used for PERIODIC_RESET mode to allow re-voting after reset.
+    """
+
+    __tablename__ = "voter_participations"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    election_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("elections.id", ondelete="CASCADE"),
+        nullable=False
+    )
+
+    # Voter identifier (hashed for privacy)
+    voter_hash = Column(String(66), nullable=False, index=True)
+
+    # Voting period number
+    voting_period = Column(Integer, default=0, nullable=False)
+
+    # Vote details for MULTI_LIMITED mode
+    # Format: {"candidate_id": vote_count, ...}
+    votes_by_candidate = Column(JSON, default={})
+
+    # Total votes cast in this period
+    total_votes_cast = Column(Integer, default=0, nullable=False)
+
+    # Timestamps
+    first_vote_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    last_vote_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    def __repr__(self) -> str:
+        return f"<VoterParticipation(id={self.id}, period={self.voting_period}, votes={self.total_votes_cast})>"
 
 
 class VoteAuditLog(Base):
