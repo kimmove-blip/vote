@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>블록체인 투표 시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div id="app">
+        <!-- Navigation -->
+        <nav class="bg-blue-600 text-white shadow-lg">
+            <div class="max-w-7xl mx-auto px-4 py-4">
+                <div class="flex items-center justify-between">
+                    <h1 class="text-2xl font-bold">블록체인 투표 시스템</h1>
+                    <div class="flex items-center space-x-4">
+                        <span class="text-sm" :class="serverStatus === 'healthy' ? 'text-green-300' : 'text-red-300'">
+                            {{ serverStatus === 'healthy' ? '서버 연결됨' : '서버 연결 안됨' }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <main class="max-w-7xl mx-auto px-4 py-8">
+            <!-- Stats -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-gray-500 text-sm font-medium">총 선거</h3>
+                    <p class="text-3xl font-bold text-gray-900">{{ elections.length }}</p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-gray-500 text-sm font-medium">진행 중</h3>
+                    <p class="text-3xl font-bold text-green-600">{{ activeElections.length }}</p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-gray-500 text-sm font-medium">완료</h3>
+                    <p class="text-3xl font-bold text-blue-600">{{ completedElections.length }}</p>
+                </div>
+            </div>
+
+            <!-- Create Election Button -->
+            <div class="mb-6">
+                <button @click="showCreateForm = !showCreateForm"
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium shadow">
+                    + 새 선거 만들기
+                </button>
+            </div>
+
+            <!-- Create Election Form -->
+            <div v-if="showCreateForm" class="bg-white rounded-lg shadow p-6 mb-8">
+                <h2 class="text-xl font-bold mb-4">새 선거 만들기</h2>
+                <form @submit.prevent="createElection" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">선거 제목</label>
+                        <input v-model="newElection.title" type="text" required
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">설명</label>
+                        <textarea v-model="newElection.description" rows="2"
+                                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2"></textarea>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">시작 시간</label>
+                            <input v-model="newElection.start_time" type="datetime-local" required
+                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">종료 시간</label>
+                            <input v-model="newElection.end_time" type="datetime-local" required
+                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">투표 방식</label>
+                        <select v-model="newElection.voting_mode"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2">
+                            <option value="single">1인 1투표</option>
+                            <option value="multi_limited">복수 투표</option>
+                            <option value="periodic_reset">주기적 리셋</option>
+                        </select>
+                    </div>
+
+                    <!-- Voting Mode Options -->
+                    <div v-if="newElection.voting_mode === 'multi_limited'" class="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">최대 후보 수</label>
+                            <input v-model.number="newElection.max_candidates" type="number" min="1"
+                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">후보당 최대 투표</label>
+                            <input v-model.number="newElection.max_votes_per_candidate" type="number" min="1"
+                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2">
+                        </div>
+                    </div>
+                    <div v-if="newElection.voting_mode === 'periodic_reset'" class="p-4 bg-gray-50 rounded">
+                        <label class="block text-sm font-medium text-gray-700">리셋 주기 (시간)</label>
+                        <input v-model.number="newElection.reset_interval_hours" type="number" min="1"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2">
+                    </div>
+
+                    <!-- Candidates -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">후보자</label>
+                        <div v-for="(candidate, index) in newElection.candidates" :key="index"
+                             class="flex gap-2 mb-2">
+                            <input v-model="candidate.name" type="text" placeholder="이름" required
+                                   class="flex-1 rounded-md border-gray-300 shadow-sm border p-2">
+                            <input v-model="candidate.party" type="text" placeholder="소속"
+                                   class="flex-1 rounded-md border-gray-300 shadow-sm border p-2">
+                            <input v-model.number="candidate.symbol_number" type="number" placeholder="기호" required
+                                   class="w-20 rounded-md border-gray-300 shadow-sm border p-2">
+                            <button type="button" @click="removeCandidate(index)"
+                                    class="text-red-600 hover:text-red-800 px-2">삭제</button>
+                        </div>
+                        <button type="button" @click="addCandidate"
+                                class="text-blue-600 hover:text-blue-800 text-sm">+ 후보자 추가</button>
+                    </div>
+
+                    <div class="flex gap-4">
+                        <button type="submit"
+                                class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg">
+                            선거 생성
+                        </button>
+                        <button type="button" @click="showCreateForm = false"
+                                class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-2 rounded-lg">
+                            취소
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Elections List -->
+            <div class="bg-white rounded-lg shadow">
+                <div class="px-6 py-4 border-b">
+                    <h2 class="text-xl font-bold">선거 목록</h2>
+                </div>
+                <div v-if="elections.length === 0" class="p-6 text-center text-gray-500">
+                    선거가 없습니다. 새 선거를 만들어 보세요.
+                </div>
+                <div v-else class="divide-y">
+                    <div v-for="election in elections" :key="election.id"
+                         class="p-6 hover:bg-gray-50">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-lg font-medium">{{ election.title }}</h3>
+                                <p class="text-sm text-gray-500">{{ election.description }}</p>
+                                <div class="mt-2 flex items-center gap-4 text-sm text-gray-600">
+                                    <span>투표 방식: {{ getVotingModeLabel(election.voting_mode) }}</span>
+                                    <span>후보: {{ election.total_candidates }}명</span>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <span :class="getStatusClass(election.status)"
+                                      class="px-3 py-1 rounded-full text-sm font-medium">
+                                    {{ getStatusLabel(election.status) }}
+                                </span>
+                                <div class="mt-2 text-sm text-gray-500">
+                                    {{ formatDate(election.start_time) }} ~ {{ formatDate(election.end_time) }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="bg-gray-800 text-white py-6 mt-12">
+            <div class="max-w-7xl mx-auto px-4 text-center">
+                <p>블록체인 모바일 투표 시스템 v1.0.0</p>
+                <p class="text-sm text-gray-400 mt-2">Powered by Hyperledger Fabric, CGS Encryption, ZKP</p>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+
+        const API_BASE = '/api/v1';
+
+        createApp({
+            setup() {
+                const serverStatus = ref('checking');
+                const elections = ref([]);
+                const showCreateForm = ref(false);
+                const newElection = ref({
+                    title: '',
+                    description: '',
+                    start_time: '',
+                    end_time: '',
+                    voting_mode: 'single',
+                    max_candidates: 3,
+                    max_votes_per_candidate: 1,
+                    reset_interval_hours: 24,
+                    candidates: [
+                        { name: '', party: '', symbol_number: 1 },
+                        { name: '', party: '', symbol_number: 2 }
+                    ]
+                });
+
+                const activeElections = computed(() =>
+                    elections.value.filter(e => e.status === 'active')
+                );
+
+                const completedElections = computed(() =>
+                    elections.value.filter(e => e.status === 'completed')
+                );
+
+                const checkHealth = async () => {
+                    try {
+                        const res = await fetch('/health');
+                        const data = await res.json();
+                        serverStatus.value = data.status;
+                    } catch (e) {
+                        serverStatus.value = 'error';
+                    }
+                };
+
+                const fetchElections = async () => {
+                    try {
+                        const res = await fetch(`${API_BASE}/elections`);
+                        elections.value = await res.json();
+                    } catch (e) {
+                        console.error('Failed to fetch elections:', e);
+                    }
+                };
+
+                const createElection = async () => {
+                    try {
+                        const payload = {
+                            title: newElection.value.title,
+                            description: newElection.value.description,
+                            start_time: new Date(newElection.value.start_time).toISOString(),
+                            end_time: new Date(newElection.value.end_time).toISOString(),
+                            candidates: newElection.value.candidates.filter(c => c.name),
+                            voting_config: {
+                                mode: newElection.value.voting_mode,
+                                max_candidates_per_voter: newElection.value.max_candidates,
+                                max_votes_per_candidate: newElection.value.max_votes_per_candidate,
+                                reset_interval_hours: newElection.value.reset_interval_hours
+                            }
+                        };
+
+                        const res = await fetch(`${API_BASE}/elections`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        if (res.ok) {
+                            showCreateForm.value = false;
+                            resetForm();
+                            fetchElections();
+                            alert('선거가 생성되었습니다!');
+                        } else {
+                            const error = await res.json();
+                            alert('오류: ' + (error.detail || '선거 생성 실패'));
+                        }
+                    } catch (e) {
+                        alert('오류: ' + e.message);
+                    }
+                };
+
+                const resetForm = () => {
+                    newElection.value = {
+                        title: '',
+                        description: '',
+                        start_time: '',
+                        end_time: '',
+                        voting_mode: 'single',
+                        max_candidates: 3,
+                        max_votes_per_candidate: 1,
+                        reset_interval_hours: 24,
+                        candidates: [
+                            { name: '', party: '', symbol_number: 1 },
+                            { name: '', party: '', symbol_number: 2 }
+                        ]
+                    };
+                };
+
+                const addCandidate = () => {
+                    const nextNum = newElection.value.candidates.length + 1;
+                    newElection.value.candidates.push({ name: '', party: '', symbol_number: nextNum });
+                };
+
+                const removeCandidate = (index) => {
+                    if (newElection.value.candidates.length > 2) {
+                        newElection.value.candidates.splice(index, 1);
+                    }
+                };
+
+                const getStatusLabel = (status) => {
+                    const labels = {
+                        draft: '초안',
+                        pending: '대기중',
+                        active: '진행중',
+                        closed: '마감',
+                        tallying: '집계중',
+                        completed: '완료',
+                        cancelled: '취소됨'
+                    };
+                    return labels[status] || status;
+                };
+
+                const getStatusClass = (status) => {
+                    const classes = {
+                        draft: 'bg-gray-100 text-gray-800',
+                        pending: 'bg-yellow-100 text-yellow-800',
+                        active: 'bg-green-100 text-green-800',
+                        closed: 'bg-red-100 text-red-800',
+                        tallying: 'bg-blue-100 text-blue-800',
+                        completed: 'bg-purple-100 text-purple-800',
+                        cancelled: 'bg-gray-100 text-gray-500'
+                    };
+                    return classes[status] || 'bg-gray-100 text-gray-800';
+                };
+
+                const getVotingModeLabel = (mode) => {
+                    const labels = {
+                        single: '1인 1투표',
+                        multi_limited: '복수 투표',
+                        periodic_reset: '주기적 리셋'
+                    };
+                    return labels[mode] || mode;
+                };
+
+                const formatDate = (dateStr) => {
+                    if (!dateStr) return '-';
+                    return new Date(dateStr).toLocaleString('ko-KR', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                };
+
+                onMounted(() => {
+                    checkHealth();
+                    fetchElections();
+                    setInterval(checkHealth, 30000);
+                });
+
+                return {
+                    serverStatus,
+                    elections,
+                    showCreateForm,
+                    newElection,
+                    activeElections,
+                    completedElections,
+                    createElection,
+                    addCandidate,
+                    removeCandidate,
+                    getStatusLabel,
+                    getStatusClass,
+                    getVotingModeLabel,
+                    formatDate
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
