@@ -494,13 +494,13 @@
                                     </td>
                                     <td class="px-5 py-4 text-right">
                                         <div class="flex items-center justify-end gap-2">
-                                            <button class="p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors">
+                                            <button @click="viewElection(election)" class="p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors" title="상세보기">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                                                 </svg>
                                             </button>
-                                            <button class="p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors">
+                                            <button @click="editElection(election)" class="p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors" title="수정">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                                 </svg>
@@ -531,7 +531,14 @@
                                 </div>
                                 <div class="flex items-center justify-between text-sm">
                                     <span class="text-gray-400">{{ getVotingModeLabel(election.voting_mode) }}</span>
-                                    <span class="text-gray-500">{{ formatDate(election.start_time) }}</span>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-gray-500">{{ formatDate(election.start_time) }}</span>
+                                        <button @click="editElection(election)" class="p-1.5 rounded-lg hover:bg-white/10 text-primary-400" title="수정">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -707,9 +714,103 @@
             </div>
         </div>
 
+        <!-- Edit Election Modal -->
+        <div v-if="showEditModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop" @click.self="showEditModal = false">
+            <div class="w-full max-w-4xl bg-dark-800 rounded-2xl shadow-2xl animate-in max-h-[90vh] overflow-hidden flex flex-col">
+                <div class="flex items-center justify-between px-6 py-4 border-b border-white/5 sticky top-0 bg-dark-800 z-10">
+                    <h3 class="text-lg font-bold">선거 수정</h3>
+                    <button @click="showEditModal = false" class="p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="p-5 lg:p-6" v-if="editingElection">
+                    <div class="flex flex-col lg:flex-row gap-6">
+                        <!-- 왼쪽: 기본 정보 -->
+                        <div class="lg:w-72 flex-shrink-0 space-y-4">
+                            <h4 class="font-semibold text-white">선거 정보</h4>
+                            <div class="space-y-3">
+                                <input v-model="editingElection.title" type="text" placeholder="선거 제목"
+                                       class="w-full bg-dark-900 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary-500/50">
+                                <textarea v-model="editingElection.description" rows="2" placeholder="설명"
+                                          class="w-full bg-dark-900 border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:border-primary-500/50 resize-none"></textarea>
+                                <select v-model="editingElection.status"
+                                        class="w-full bg-dark-900 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary-500/50">
+                                    <option value="draft">초안</option>
+                                    <option value="pending">대기중</option>
+                                    <option value="active">진행중</option>
+                                    <option value="completed">완료</option>
+                                </select>
+                                <select v-model="editingElection.voting_mode"
+                                        class="w-full bg-dark-900 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary-500/50">
+                                    <option value="single">1인 1투표</option>
+                                    <option value="multi_limited">복수 투표</option>
+                                    <option value="periodic_reset">주기적 리셋</option>
+                                </select>
+                                <label class="flex items-center gap-2 p-3 bg-dark-900 rounded-lg cursor-pointer">
+                                    <input type="checkbox" v-model="editingElection.is_star_vote" class="w-4 h-4 rounded">
+                                    <span class="text-sm">⭐ 스타 투표</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- 오른쪽: 후보자 목록 -->
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center justify-between mb-4">
+                                <h4 class="font-semibold text-white">후보자 {{ editingElection.candidates?.length || 0 }}명</h4>
+                                <button type="button" @click="addEditCandidate" class="text-sm text-primary-400 hover:text-primary-300">+ 추가</button>
+                            </div>
+                            <div class="space-y-2 max-h-[60vh] overflow-y-auto">
+                                <div v-for="(candidate, index) in editingElection.candidates" :key="index"
+                                     class="flex items-center gap-3 p-3 bg-dark-900 rounded-xl">
+                                    <!-- 사진 -->
+                                    <img v-if="candidate.image" :src="candidate.image" class="w-12 h-12 rounded-lg object-cover flex-shrink-0">
+                                    <div v-else class="w-12 h-12 bg-primary-600/20 rounded-lg flex items-center justify-center text-primary-400 font-bold flex-shrink-0">
+                                        {{ candidate.symbol_number }}
+                                    </div>
+                                    <!-- 이름/소속 -->
+                                    <div class="flex-1 min-w-0">
+                                        <input v-model="candidate.name" type="text" placeholder="이름"
+                                               class="w-full bg-transparent border-b border-white/10 px-1 py-1 text-white text-sm focus:outline-none focus:border-primary-500">
+                                        <input v-model="candidate.party" type="text" placeholder="소속"
+                                               class="w-full bg-transparent border-b border-white/10 px-1 py-1 text-gray-400 text-xs focus:outline-none focus:border-primary-500">
+                                    </div>
+                                    <!-- 미디어 아이콘 -->
+                                    <div class="flex gap-1 text-xs text-gray-500">
+                                        <span v-if="candidate.video">🎬</span>
+                                        <span v-if="candidate.gallery?.length">🖼️</span>
+                                    </div>
+                                    <!-- 버튼 -->
+                                    <button @click="openEditCandidateDetail(index)" class="p-2 text-primary-400 hover:bg-white/5 rounded-lg" title="미디어 편집">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                        </svg>
+                                    </button>
+                                    <button @click="removeEditCandidate(index)" class="p-2 text-red-400 hover:bg-white/5 rounded-lg" title="삭제">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/5 sticky bottom-0 bg-dark-800">
+                    <button @click="showEditModal = false" class="px-5 py-2.5 rounded-xl font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors">
+                        취소
+                    </button>
+                    <button @click="saveElection" class="btn-primary text-white px-6 py-2.5 rounded-xl font-medium">
+                        저장
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Candidate Detail Modal -->
-        <div v-if="showCandidateModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop" @click.self="showCandidateModal = false">
-            <div class="w-full max-w-lg bg-dark-800 rounded-2xl shadow-2xl animate-in max-h-[90vh] overflow-y-auto">
+        <div v-if="showCandidateModal" class="fixed inset-0 z-50 flex items-center justify-center p-2 lg:p-6 modal-backdrop" @click.self="showCandidateModal = false">
+            <div class="w-full max-w-2xl bg-dark-800 rounded-2xl shadow-2xl animate-in max-h-[95vh] overflow-y-auto">
                 <div class="flex items-center justify-between px-6 py-4 border-b border-white/5 sticky top-0 bg-dark-800">
                     <h3 class="text-lg font-bold">후보자 상세 정보</h3>
                     <button @click="showCandidateModal = false" class="p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors">
@@ -718,43 +819,76 @@
                         </svg>
                     </button>
                 </div>
-                <div class="p-6 space-y-5" v-if="editingCandidate">
-                    <!-- 기본 정보 -->
-                    <div class="space-y-3">
-                        <h4 class="text-sm font-semibold text-gray-400">기본 정보</h4>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-xs text-gray-500 mb-1">이름</label>
-                                <input v-model="editingCandidate.name" type="text"
-                                       class="w-full bg-dark-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary-500/50">
+                <div class="p-4 lg:p-6" v-if="editingCandidate">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- 왼쪽 컬럼 -->
+                        <div class="space-y-5">
+                            <!-- 기본 정보 -->
+                            <div class="space-y-3">
+                                <h4 class="text-sm font-semibold text-gray-400">기본 정보</h4>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-xs text-gray-500 mb-1">이름</label>
+                                        <input v-model="editingCandidate.name" type="text"
+                                               class="w-full bg-dark-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary-500/50">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-gray-500 mb-1">소속</label>
+                                        <input v-model="editingCandidate.party" type="text"
+                                               class="w-full bg-dark-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary-500/50">
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                                <label class="block text-xs text-gray-500 mb-1">소속</label>
-                                <input v-model="editingCandidate.party" type="text"
-                                       class="w-full bg-dark-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary-500/50">
-                            </div>
-                        </div>
-                    </div>
 
-                    <!-- 프로필 사진 -->
+                            <!-- 프로필 사진 -->
                     <div class="space-y-3">
-                        <h4 class="text-sm font-semibold text-gray-400">프로필 사진 URL</h4>
-                        <input v-model="editingCandidate.image" type="url" placeholder="https://example.com/photo.jpg"
-                               class="w-full bg-dark-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-primary-500/50">
-                        <div v-if="editingCandidate.image" class="flex items-center gap-3">
-                            <img :src="editingCandidate.image" class="w-20 h-20 object-cover rounded-lg" @error="editingCandidate.image = ''">
-                            <span class="text-xs text-green-400">✓ 이미지 미리보기</span>
+                        <h4 class="text-sm font-semibold text-gray-400">프로필 사진</h4>
+                        <div class="flex gap-3 items-start">
+                            <div v-if="editingCandidate.image" class="relative">
+                                <img :src="editingCandidate.image" class="w-24 h-24 object-cover rounded-xl">
+                                <button @click="editingCandidate.image = ''" class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-xs">✕</button>
+                            </div>
+                            <label v-else class="flex-1 flex flex-col items-center justify-center p-6 border-2 border-dashed border-white/20 rounded-xl cursor-pointer hover:border-primary-500/50 transition-colors">
+                                <svg class="w-8 h-8 text-gray-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                                <span class="text-sm text-gray-400">클릭하여 사진 선택</span>
+                                <span class="text-xs text-gray-600 mt-1">JPG, PNG (최대 5MB)</span>
+                                <input type="file" accept="image/*" @change="handleImageUpload($event, 'image')" class="hidden">
+                            </label>
+                        </div>
+                        <div class="flex gap-2">
+                            <input v-model="editingCandidate.image" type="url" placeholder="또는 URL 입력..."
+                                   class="flex-1 bg-dark-900 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-primary-500/50">
                         </div>
                     </div>
 
                     <!-- 프로필 동영상 -->
                     <div class="space-y-3">
-                        <h4 class="text-sm font-semibold text-gray-400">프로필 동영상 URL</h4>
-                        <input v-model="editingCandidate.video" type="url" placeholder="https://example.com/video.mp4"
-                               class="w-full bg-dark-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-primary-500/50">
-                        <p class="text-xs text-gray-500">MP4 형식 권장, 직접 링크 필요</p>
+                        <h4 class="text-sm font-semibold text-gray-400">프로필 동영상</h4>
+                        <div class="flex gap-3 items-start">
+                            <div v-if="editingCandidate.video" class="relative">
+                                <video :src="editingCandidate.video" class="w-32 h-24 object-cover rounded-xl" muted></video>
+                                <button @click="editingCandidate.video = ''" class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-xs">✕</button>
+                            </div>
+                            <label v-else class="flex-1 flex flex-col items-center justify-center p-6 border-2 border-dashed border-white/20 rounded-xl cursor-pointer hover:border-primary-500/50 transition-colors">
+                                <svg class="w-8 h-8 text-gray-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                </svg>
+                                <span class="text-sm text-gray-400">클릭하여 동영상 선택</span>
+                                <span class="text-xs text-gray-600 mt-1">MP4 (최대 50MB)</span>
+                                <input type="file" accept="video/*" @change="handleVideoUpload($event)" class="hidden">
+                            </label>
+                        </div>
+                        <div class="flex gap-2">
+                            <input v-model="editingCandidate.video" type="url" placeholder="또는 URL 입력..."
+                                   class="flex-1 bg-dark-900 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-primary-500/50">
+                        </div>
                     </div>
+                        </div>
 
+                        <!-- 오른쪽 컬럼 -->
+                        <div class="space-y-5">
                     <!-- 소개글 -->
                     <div class="space-y-3">
                         <h4 class="text-sm font-semibold text-gray-400">소개글 (프로필)</h4>
@@ -766,21 +900,30 @@
                     <div class="space-y-3">
                         <div class="flex items-center justify-between">
                             <h4 class="text-sm font-semibold text-gray-400">갤러리 이미지</h4>
-                            <button type="button" @click="addGalleryImage" class="text-xs text-primary-400 hover:text-primary-300">+ 추가</button>
+                            <label class="text-xs text-primary-400 hover:text-primary-300 cursor-pointer">
+                                + 사진 추가
+                                <input type="file" accept="image/*" multiple @change="handleGalleryUpload($event)" class="hidden">
+                            </label>
                         </div>
-                        <div class="space-y-2">
-                            <div v-for="(img, idx) in (editingCandidate.gallery || [])" :key="idx" class="flex gap-2 items-center">
-                                <input v-model="editingCandidate.gallery[idx]" type="url" placeholder="이미지 URL"
-                                       class="flex-1 bg-dark-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-primary-500/50">
-                                <img v-if="editingCandidate.gallery[idx]" :src="editingCandidate.gallery[idx]" class="w-10 h-10 object-cover rounded" @error="editingCandidate.gallery[idx] = ''">
-                                <button type="button" @click="removeGalleryImage(idx)" class="p-2 text-red-400 hover:bg-red-400/10 rounded-lg">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                    </svg>
+                        <div class="grid grid-cols-4 gap-2">
+                            <div v-for="(img, idx) in (editingCandidate.gallery || [])" :key="idx" class="relative">
+                                <img :src="img" class="w-full aspect-square object-cover rounded-lg">
+                                <button type="button" @click="removeGalleryImage(idx)"
+                                        class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white text-xs">
+                                    ✕
                                 </button>
                             </div>
+                            <label v-if="(editingCandidate.gallery?.length || 0) < 10"
+                                   class="aspect-square border-2 border-dashed border-white/20 rounded-lg flex items-center justify-center cursor-pointer hover:border-primary-500/50 transition-colors">
+                                <svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                </svg>
+                                <input type="file" accept="image/*" multiple @change="handleGalleryUpload($event)" class="hidden">
+                            </label>
                         </div>
-                        <p class="text-xs text-gray-500">최대 10개까지 추가 가능</p>
+                        <p class="text-xs text-gray-500">{{ editingCandidate.gallery?.length || 0 }}/10개</p>
+                    </div>
+                        </div>
                     </div>
                 </div>
                 <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/5 sticky bottom-0 bg-dark-800">
@@ -869,8 +1012,38 @@
                         voting_mode: 'single',
                         status: 'active',
                         total_candidates: 8,
+                        is_star_vote: true,
                         start_time: new Date().toISOString(),
-                        end_time: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString()
+                        end_time: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
+                        candidates: [
+                            { id: 10, symbol_number: 1, name: '김태연', party: 'STELLAR', crowns: 15234, votes: 3842,
+                              image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=600&fit=crop',
+                              video: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+                              bio: '2019년 데뷔 이후 꾸준한 사랑을 받고 있는 STELLAR의 메인보컬.',
+                              gallery: ['https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=200&h=200&fit=crop'] },
+                            { id: 11, symbol_number: 2, name: '박준혁', party: 'NOVA', crowns: 12891, votes: 3215,
+                              image: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=600&fit=crop',
+                              bio: 'NOVA의 리더이자 메인댄서.', gallery: [] },
+                            { id: 12, symbol_number: 3, name: '이서연', party: 'BLOOM', crowns: 11567, votes: 2987,
+                              image: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=400&h=600&fit=crop',
+                              video: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+                              bio: 'BLOOM의 비주얼 담당.', gallery: [] },
+                            { id: 13, symbol_number: 4, name: '정우진', party: 'ECLIPSE', crowns: 9874, votes: 2654,
+                              image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=600&fit=crop',
+                              bio: 'ECLIPSE의 메인래퍼.', gallery: [] },
+                            { id: 14, symbol_number: 5, name: '한소희', party: 'PRISM', crowns: 8765, votes: 2341,
+                              image: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=400&h=600&fit=crop',
+                              bio: 'PRISM의 메인보컬.', gallery: [] },
+                            { id: 15, symbol_number: 6, name: '최민수', party: 'ZENITH', crowns: 7654, votes: 2108,
+                              image: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=400&h=600&fit=crop',
+                              bio: 'ZENITH의 막내.', gallery: [] },
+                            { id: 16, symbol_number: 7, name: '강예린', party: 'AURORA', crowns: 6543, votes: 1876,
+                              image: 'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=400&h=600&fit=crop',
+                              bio: 'AURORA의 리더.', gallery: [] },
+                            { id: 17, symbol_number: 8, name: '윤재현', party: 'ORBIT', crowns: 5432, votes: 1654,
+                              image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=600&fit=crop',
+                              bio: 'ORBIT의 메인댄서.', gallery: [] }
+                        ]
                     },
                     {
                         id: 2,
@@ -880,7 +1053,12 @@
                         status: 'active',
                         total_candidates: 3,
                         start_time: new Date().toISOString(),
-                        end_time: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString()
+                        end_time: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+                        candidates: [
+                            { id: 1, symbol_number: 1, name: '김철수', party: '혁신당', image: '', video: '', bio: '', gallery: [] },
+                            { id: 2, symbol_number: 2, name: '이영희', party: '미래당', image: '', video: '', bio: '', gallery: [] },
+                            { id: 3, symbol_number: 3, name: '박민수', party: '무소속', image: '', video: '', bio: '', gallery: [] }
+                        ]
                     },
                     {
                         id: 3,
@@ -905,9 +1083,12 @@
                 ]);
                 const currentView = ref('dashboard');
                 const showCreateModal = ref(false);
+                const showEditModal = ref(false);
                 const showCandidateModal = ref(false);
+                const editingElection = ref(null);
                 const editingCandidateIndex = ref(-1);
                 const editingCandidate = ref(null);
+                const isEditMode = ref(false);
                 const loading = ref(true);
                 const submitting = ref(false);
                 const toasts = ref([]);
@@ -1076,7 +1257,7 @@
                     }
                 };
 
-                // 후보자 상세 편집
+                // 후보자 상세 편집 (새 선거 생성 시)
                 const openCandidateDetail = (index) => {
                     editingCandidateIndex.value = index;
                     const candidate = newElection.value.candidates[index];
@@ -1087,15 +1268,16 @@
                         bio: candidate.bio || '',
                         gallery: candidate.gallery ? [...candidate.gallery] : []
                     };
+                    isEditMode.value = false;
                     showCandidateModal.value = true;
                 };
 
                 const saveCandidateDetail = () => {
                     if (editingCandidateIndex.value >= 0 && editingCandidate.value) {
-                        // 빈 갤러리 URL 제거
                         const gallery = (editingCandidate.value.gallery || []).filter(url => url && url.trim());
-                        newElection.value.candidates[editingCandidateIndex.value] = {
-                            ...newElection.value.candidates[editingCandidateIndex.value],
+                        const targetCandidates = isEditMode.value ? editingElection.value.candidates : newElection.value.candidates;
+                        targetCandidates[editingCandidateIndex.value] = {
+                            ...targetCandidates[editingCandidateIndex.value],
                             ...editingCandidate.value,
                             gallery
                         };
@@ -1116,6 +1298,161 @@
 
                 const removeGalleryImage = (index) => {
                     editingCandidate.value.gallery.splice(index, 1);
+                };
+
+                // 파일을 Base64로 변환
+                const fileToBase64 = (file) => {
+                    return new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.readAsDataURL(file);
+                        reader.onload = () => resolve(reader.result);
+                        reader.onerror = error => reject(error);
+                    });
+                };
+
+                // 이미지 업로드 처리
+                const handleImageUpload = async (event, field) => {
+                    const file = event.target.files[0];
+                    if (!file) return;
+
+                    // 파일 크기 체크 (5MB)
+                    if (file.size > 5 * 1024 * 1024) {
+                        showToast('이미지 크기는 5MB 이하여야 합니다', 'error');
+                        return;
+                    }
+
+                    try {
+                        const base64 = await fileToBase64(file);
+                        editingCandidate.value[field] = base64;
+                        showToast('이미지가 업로드되었습니다', 'success');
+                    } catch (e) {
+                        showToast('이미지 업로드 실패', 'error');
+                    }
+                };
+
+                // 동영상 업로드 처리
+                const handleVideoUpload = async (event) => {
+                    const file = event.target.files[0];
+                    if (!file) return;
+
+                    // 파일 크기 체크 (50MB)
+                    if (file.size > 50 * 1024 * 1024) {
+                        showToast('동영상 크기는 50MB 이하여야 합니다', 'error');
+                        return;
+                    }
+
+                    try {
+                        const base64 = await fileToBase64(file);
+                        editingCandidate.value.video = base64;
+                        showToast('동영상이 업로드되었습니다', 'success');
+                    } catch (e) {
+                        showToast('동영상 업로드 실패', 'error');
+                    }
+                };
+
+                // 갤러리 이미지 업로드
+                const handleGalleryUpload = async (event) => {
+                    const files = Array.from(event.target.files);
+                    if (!files.length) return;
+
+                    if (!editingCandidate.value.gallery) {
+                        editingCandidate.value.gallery = [];
+                    }
+
+                    const remaining = 10 - editingCandidate.value.gallery.length;
+                    const filesToProcess = files.slice(0, remaining);
+
+                    for (const file of filesToProcess) {
+                        if (file.size > 5 * 1024 * 1024) {
+                            showToast(`${file.name}은 5MB를 초과합니다`, 'error');
+                            continue;
+                        }
+                        try {
+                            const base64 = await fileToBase64(file);
+                            editingCandidate.value.gallery.push(base64);
+                        } catch (e) {
+                            console.error('Gallery upload error:', e);
+                        }
+                    }
+                    showToast(`${filesToProcess.length}개 이미지 추가됨`, 'success');
+                };
+
+                // 선거 수정
+                const editElection = (election) => {
+                    editingElection.value = JSON.parse(JSON.stringify(election));
+                    // 후보자 데이터가 없으면 빈 배열로 초기화
+                    if (!editingElection.value.candidates) {
+                        editingElection.value.candidates = [];
+                    }
+                    isEditMode.value = true;
+                    showEditModal.value = true;
+                };
+
+                const viewElection = (election) => {
+                    editElection(election);
+                };
+
+                const saveElection = () => {
+                    if (!editingElection.value) return;
+                    const index = elections.value.findIndex(e => e.id === editingElection.value.id);
+                    if (index >= 0) {
+                        editingElection.value.total_candidates = editingElection.value.candidates?.length || 0;
+                        elections.value[index] = { ...editingElection.value };
+                        showToast('선거가 수정되었습니다', 'success');
+                    }
+                    showEditModal.value = false;
+                    editingElection.value = null;
+                };
+
+                const addEditCandidate = () => {
+                    if (!editingElection.value.candidates) {
+                        editingElection.value.candidates = [];
+                    }
+                    const nextNum = editingElection.value.candidates.length + 1;
+                    editingElection.value.candidates.push({
+                        id: Date.now(),
+                        name: '',
+                        party: '',
+                        symbol_number: nextNum,
+                        image: '',
+                        video: '',
+                        bio: '',
+                        gallery: []
+                    });
+                };
+
+                const removeEditCandidate = (index) => {
+                    editingElection.value.candidates.splice(index, 1);
+                };
+
+                const openEditCandidateDetail = (index) => {
+                    editingCandidateIndex.value = index;
+                    const candidate = editingElection.value.candidates[index];
+                    editingCandidate.value = {
+                        ...candidate,
+                        image: candidate.image || '',
+                        video: candidate.video || '',
+                        bio: candidate.bio || '',
+                        gallery: candidate.gallery ? [...candidate.gallery] : []
+                    };
+                    isEditMode.value = true;
+                    showCandidateModal.value = true;
+                };
+
+                // 후보자 상세 저장 (생성/수정 모드 통합)
+                const saveCandidateDetailUnified = () => {
+                    if (editingCandidateIndex.value >= 0 && editingCandidate.value) {
+                        const gallery = (editingCandidate.value.gallery || []).filter(url => url && url.trim());
+                        const targetCandidates = isEditMode.value ? editingElection.value.candidates : newElection.value.candidates;
+                        targetCandidates[editingCandidateIndex.value] = {
+                            ...targetCandidates[editingCandidateIndex.value],
+                            ...editingCandidate.value,
+                            gallery
+                        };
+                    }
+                    showCandidateModal.value = false;
+                    editingCandidate.value = null;
+                    editingCandidateIndex.value = -1;
                 };
 
                 const getStatusLabel = (status) => {
@@ -1216,7 +1553,9 @@
                     elections,
                     currentView,
                     showCreateModal,
+                    showEditModal,
                     showCandidateModal,
+                    editingElection,
                     editingCandidate,
                     loading,
                     submitting,
@@ -1240,6 +1579,15 @@
                     saveCandidateDetail,
                     addGalleryImage,
                     removeGalleryImage,
+                    handleImageUpload,
+                    handleVideoUpload,
+                    handleGalleryUpload,
+                    editElection,
+                    viewElection,
+                    saveElection,
+                    addEditCandidate,
+                    removeEditCandidate,
+                    openEditCandidateDetail,
                     getStatusLabel,
                     getStatusClass,
                     getStatusBgClass,
