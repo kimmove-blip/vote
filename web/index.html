@@ -2,192 +2,831 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>블록체인 투표 시스템</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#12141f">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="VoteChain">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="manifest" href="manifest.json">
+    <title>VoteChain - 블록체인 투표 관리 시스템</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Pretendard', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: { 50: '#f0f4ff', 100: '#e0e9ff', 200: '#c7d6fe', 300: '#a3b8fc', 400: '#7a8ff8', 500: '#5a67f2', 600: '#4549e6', 700: '#3a3bcb', 800: '#3133a4', 900: '#2e3182' },
+                        dark: { 800: '#1e2130', 850: '#181a27', 900: '#12141f', 950: '#0c0d14' }
+                    }
+                },
+            },
+        }
+    </script>
+    <style>
+        [v-cloak] { display: none; }
+        * { scrollbar-width: thin; scrollbar-color: #3a3d4d #1e2130; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #1e2130; }
+        ::-webkit-scrollbar-thumb { background: #3a3d4d; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #4a4d5d; }
+        .sidebar-item { transition: all 0.2s ease; }
+        .sidebar-item:hover { background: rgba(90, 103, 242, 0.1); }
+        .sidebar-item.active { background: rgba(90, 103, 242, 0.15); border-right: 3px solid #5a67f2; }
+        .card { background: linear-gradient(135deg, #1e2130 0%, #252836 100%); border: 1px solid rgba(255,255,255,0.05); }
+        .card-glass { background: rgba(30, 33, 48, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.08); }
+        .stat-card { position: relative; overflow: hidden; }
+        .stat-card::before { content: ''; position: absolute; top: 0; right: 0; width: 100px; height: 100px; border-radius: 50%; filter: blur(40px); opacity: 0.15; }
+        .stat-card.blue::before { background: #3b82f6; }
+        .stat-card.green::before { background: #10b981; }
+        .stat-card.purple::before { background: #8b5cf6; }
+        .stat-card.amber::before { background: #f59e0b; }
+        .btn-primary { background: linear-gradient(135deg, #5a67f2 0%, #4549e6 100%); transition: all 0.3s ease; }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 20px -4px rgba(90, 103, 242, 0.4); }
+        .pulse-dot { animation: pulse-dot 2s infinite; }
+        @keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .table-row { transition: background 0.15s ease; }
+        .table-row:hover { background: rgba(255,255,255,0.02); }
+        .modal-backdrop { background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); }
+        .progress-ring { transform: rotate(-90deg); }
+        .animate-in { animation: fadeSlideIn 0.3s ease-out; }
+        @keyframes fadeSlideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .safe-area-top {
+            padding-top: env(safe-area-inset-top, 0px);
+            min-height: env(safe-area-inset-top, 0px);
+        }
+        .safe-area-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
+        .pb-safe { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px); }
+        @media (max-width: 1023px) {
+            .mobile-pb { padding-bottom: 5.5rem; }
+        }
+    </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
-    <div id="app">
-        <!-- Navigation -->
-        <nav class="bg-blue-600 text-white shadow-lg">
-            <div class="max-w-7xl mx-auto px-4 py-4">
-                <div class="flex items-center justify-between">
-                    <h1 class="text-2xl font-bold">블록체인 투표 시스템</h1>
-                    <div class="flex items-center space-x-4">
-                        <span class="text-sm" :class="serverStatus === 'healthy' ? 'text-green-300' : 'text-red-300'">
-                            {{ serverStatus === 'healthy' ? '서버 연결됨' : '서버 연결 안됨' }}
+<body class="bg-dark-900 text-gray-100 font-sans">
+    <div id="app" v-cloak class="flex h-screen overflow-hidden">
+
+        <!-- Sidebar - Hidden on mobile -->
+        <aside class="hidden lg:flex w-64 bg-dark-850 border-r border-white/5 flex-col flex-shrink-0">
+            <!-- Logo -->
+            <div class="h-16 flex items-center px-6 border-b border-white/5">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 bg-gradient-to-br from-primary-500 to-primary-700 rounded-xl flex items-center justify-center">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-bold text-white">VoteChain</h1>
+                        <p class="text-[10px] text-gray-500 -mt-0.5">Admin Console</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="flex-1 py-4 px-3 space-y-1">
+                <a href="#" @click.prevent="currentView = 'dashboard'"
+                   :class="{'active': currentView === 'dashboard'}"
+                   class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:text-white">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+                    </svg>
+                    대시보드
+                </a>
+                <a href="#" @click.prevent="currentView = 'elections'"
+                   :class="{'active': currentView === 'elections'}"
+                   class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:text-white">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                    </svg>
+                    선거 관리
+                    <span class="ml-auto bg-primary-600/30 text-primary-400 text-xs px-2 py-0.5 rounded-full">{{ elections.length }}</span>
+                </a>
+                <a href="#" @click.prevent="currentView = 'voters'"
+                   :class="{'active': currentView === 'voters'}"
+                   class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:text-white">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                    </svg>
+                    유권자 관리
+                </a>
+                <a href="#" @click.prevent="currentView = 'results'"
+                   :class="{'active': currentView === 'results'}"
+                   class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:text-white">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                    </svg>
+                    개표 결과
+                </a>
+
+                <div class="pt-4 mt-4 border-t border-white/5">
+                    <p class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">바로가기</p>
+                    <a href="voter.html" target="_blank" class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:text-white">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"/>
+                        </svg>
+                        유권자 페이지
+                        <svg class="w-3 h-3 ml-auto text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                        </svg>
+                    </a>
+                    <a href="idol-vote.html" target="_blank" class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:text-white">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+                        </svg>
+                        스타 투표
+                        <span class="ml-auto px-1.5 py-0.5 bg-pink-500/20 text-pink-400 text-[10px] font-bold rounded">HOT</span>
+                    </a>
+                </div>
+                <div class="pt-4 mt-4 border-t border-white/5">
+                    <p class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">시스템</p>
+                    <a href="#" class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:text-white">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                        설정
+                    </a>
+                    <a href="#" class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:text-white">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        감사 로그
+                    </a>
+                </div>
+            </nav>
+
+            <!-- Server Status -->
+            <div class="p-4 border-t border-white/5">
+                <div class="card rounded-xl p-3">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-medium text-gray-400">시스템 상태</span>
+                        <span class="flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full pulse-dot" :class="serverStatus === 'healthy' ? 'bg-emerald-400' : 'bg-red-400'"></span>
+                            <span class="text-xs" :class="serverStatus === 'healthy' ? 'text-emerald-400' : 'text-red-400'">
+                                {{ serverStatus === 'healthy' ? 'Online' : 'Offline' }}
+                            </span>
                         </span>
                     </div>
+                    <div class="grid grid-cols-3 gap-2 text-center">
+                        <div>
+                            <p class="text-lg font-bold text-white">99.9%</p>
+                            <p class="text-[10px] text-gray-500">Uptime</p>
+                        </div>
+                        <div>
+                            <p class="text-lg font-bold text-white">23ms</p>
+                            <p class="text-[10px] text-gray-500">Latency</p>
+                        </div>
+                        <div>
+                            <p class="text-lg font-bold text-white">TLS</p>
+                            <p class="text-[10px] text-gray-500">Security</p>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </nav>
+        </aside>
 
-        <main class="max-w-7xl mx-auto px-4 py-8">
-            <!-- Stats -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div class="bg-white rounded-lg shadow p-6">
-                    <h3 class="text-gray-500 text-sm font-medium">총 선거</h3>
-                    <p class="text-3xl font-bold text-gray-900">{{ elections.length }}</p>
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <!-- Top Header -->
+            <header class="bg-dark-850 border-b border-white/5 flex-shrink-0">
+                <div class="lg:hidden safe-area-top bg-dark-850"></div>
+                <div class="h-14 lg:h-16 flex items-center justify-between px-4 lg:px-6">
+                <div class="flex items-center gap-3">
+                    <!-- Mobile Logo -->
+                    <div class="lg:hidden flex items-center gap-2">
+                        <div class="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center">
+                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div>
+                        <h2 class="text-base lg:text-lg font-semibold text-white">{{ viewTitle }}</h2>
+                        <p class="text-[10px] lg:text-xs text-gray-500 hidden sm:block">{{ currentDate }}</p>
+                    </div>
                 </div>
-                <div class="bg-white rounded-lg shadow p-6">
-                    <h3 class="text-gray-500 text-sm font-medium">진행 중</h3>
-                    <p class="text-3xl font-bold text-green-600">{{ activeElections.length }}</p>
+                <div class="flex items-center gap-2 lg:gap-4">
+                    <!-- Page Links - Mobile only -->
+                    <div class="lg:hidden flex items-center gap-1">
+                        <a href="voter.html" target="_blank" class="flex items-center gap-1 px-2 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-[10px] font-medium rounded-lg transition-colors">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            투표
+                        </a>
+                        <a href="idol-vote.html" target="_blank" class="flex items-center gap-1 px-2 py-1.5 bg-pink-600 hover:bg-pink-700 text-white text-[10px] font-medium rounded-lg transition-colors">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+                            </svg>
+                            스타
+                        </a>
+                    </div>
+                    <!-- Search - Hidden on mobile -->
+                    <div class="relative hidden md:block">
+                        <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                        <input type="text" placeholder="검색..." class="w-48 lg:w-64 bg-dark-900 border border-white/10 rounded-lg pl-10 pr-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-primary-500/50">
+                    </div>
+                    <!-- Mobile Search Button -->
+                    <button class="md:hidden p-2 rounded-lg hover:bg-white/5 text-gray-400">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                    </button>
+                    <!-- Notifications -->
+                    <button class="relative p-2 rounded-lg hover:bg-white/5 transition-colors">
+                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                        </svg>
+                        <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
+                    </button>
+                    <!-- User -->
+                    <div class="flex items-center gap-2 lg:gap-3 pl-2 lg:pl-4 border-l border-white/10">
+                        <div class="w-8 h-8 lg:w-9 lg:h-9 bg-gradient-to-br from-primary-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-xs lg:text-sm">
+                            AD
+                        </div>
+                        <div class="hidden lg:block">
+                            <p class="text-sm font-medium text-white">관리자</p>
+                            <p class="text-xs text-gray-500">admin@votechain.io</p>
+                        </div>
+                    </div>
                 </div>
-                <div class="bg-white rounded-lg shadow p-6">
-                    <h3 class="text-gray-500 text-sm font-medium">완료</h3>
-                    <p class="text-3xl font-bold text-blue-600">{{ completedElections.length }}</p>
+                </div>
+            </header>
+
+            <!-- Content Area -->
+            <main class="flex-1 overflow-auto p-4 lg:p-6 bg-dark-900 mobile-pb">
+                <!-- Dashboard View -->
+                <div v-if="currentView === 'dashboard'" class="animate-in">
+                    <!-- Stats Grid -->
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-5 mb-6">
+                        <div class="stat-card blue card rounded-2xl p-5">
+                            <div class="flex items-start justify-between">
+                                <div>
+                                    <p class="text-sm text-gray-400 mb-1">총 선거</p>
+                                    <p class="text-3xl font-bold text-white">{{ elections.length }}</p>
+                                    <p class="text-xs text-emerald-400 mt-2 flex items-center gap-1">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
+                                        +12% 이번 달
+                                    </p>
+                                </div>
+                                <div class="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="stat-card green card rounded-2xl p-5">
+                            <div class="flex items-start justify-between">
+                                <div>
+                                    <p class="text-sm text-gray-400 mb-1">진행 중</p>
+                                    <p class="text-3xl font-bold text-white">{{ activeElections.length }}</p>
+                                    <p class="text-xs text-gray-500 mt-2">실시간 투표 진행</p>
+                                </div>
+                                <div class="w-12 h-12 bg-emerald-500/20 rounded-xl flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="stat-card purple card rounded-2xl p-5">
+                            <div class="flex items-start justify-between">
+                                <div>
+                                    <p class="text-sm text-gray-400 mb-1">총 투표수</p>
+                                    <p class="text-3xl font-bold text-white">{{ totalVotes.toLocaleString() }}</p>
+                                    <p class="text-xs text-emerald-400 mt-2 flex items-center gap-1">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
+                                        +28% 전주 대비
+                                    </p>
+                                </div>
+                                <div class="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="stat-card amber card rounded-2xl p-5">
+                            <div class="flex items-start justify-between">
+                                <div>
+                                    <p class="text-sm text-gray-400 mb-1">등록 유권자</p>
+                                    <p class="text-3xl font-bold text-white">{{ registeredVoters.toLocaleString() }}</p>
+                                    <p class="text-xs text-gray-500 mt-2">DID 인증 완료</p>
+                                </div>
+                                <div class="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts Row -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-5 mb-6">
+                        <!-- Vote Trend Chart -->
+                        <div class="lg:col-span-2 card rounded-2xl p-4 lg:p-5">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="font-semibold text-white">투표 추이</h3>
+                                <div class="flex items-center gap-2">
+                                    <button class="px-3 py-1 text-xs rounded-lg bg-primary-600/20 text-primary-400">7일</button>
+                                    <button class="px-3 py-1 text-xs rounded-lg text-gray-400 hover:bg-white/5">30일</button>
+                                    <button class="px-3 py-1 text-xs rounded-lg text-gray-400 hover:bg-white/5">90일</button>
+                                </div>
+                            </div>
+                            <div id="voteChart" class="h-64"></div>
+                        </div>
+
+                        <!-- Participation Rate -->
+                        <div class="card rounded-2xl p-5">
+                            <h3 class="font-semibold text-white mb-4">투표 참여율</h3>
+                            <div class="flex items-center justify-center py-4">
+                                <div class="relative">
+                                    <svg class="w-40 h-40 progress-ring">
+                                        <circle cx="80" cy="80" r="70" stroke="#252836" stroke-width="12" fill="none"/>
+                                        <circle cx="80" cy="80" r="70" stroke="url(#gradient)" stroke-width="12" fill="none"
+                                                stroke-linecap="round" :stroke-dasharray="440" :stroke-dashoffset="440 - (440 * participationRate / 100)"/>
+                                        <defs>
+                                            <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                                <stop offset="0%" stop-color="#5a67f2"/>
+                                                <stop offset="100%" stop-color="#8b5cf6"/>
+                                            </linearGradient>
+                                        </defs>
+                                    </svg>
+                                    <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                        <span class="text-3xl font-bold text-white">{{ participationRate }}%</span>
+                                        <span class="text-xs text-gray-500">전체 참여율</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3 mt-4">
+                                <div class="bg-dark-900 rounded-xl p-3 text-center">
+                                    <p class="text-lg font-bold text-emerald-400">{{ votedCount.toLocaleString() }}</p>
+                                    <p class="text-xs text-gray-500">투표 완료</p>
+                                </div>
+                                <div class="bg-dark-900 rounded-xl p-3 text-center">
+                                    <p class="text-lg font-bold text-gray-400">{{ (registeredVoters - votedCount).toLocaleString() }}</p>
+                                    <p class="text-xs text-gray-500">미투표</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Elections & Activity -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-5">
+                        <!-- Recent Elections -->
+                        <div class="lg:col-span-2 card rounded-2xl">
+                            <div class="flex items-center justify-between p-5 border-b border-white/5">
+                                <h3 class="font-semibold text-white">최근 선거</h3>
+                                <button @click="currentView = 'elections'" class="text-sm text-primary-400 hover:text-primary-300">전체 보기</button>
+                            </div>
+                            <div class="divide-y divide-white/5">
+                                <div v-for="election in elections.slice(0, 4)" :key="election.id" class="table-row flex items-center justify-between p-4">
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-10 h-10 rounded-xl flex items-center justify-center" :class="getStatusBgClass(election.status)">
+                                            <svg class="w-5 h-5" :class="getStatusIconClass(election.status)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path v-if="election.status === 'active'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                                <path v-else-if="election.status === 'completed'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <p class="font-medium text-white">{{ election.title }}</p>
+                                            <p class="text-xs text-gray-500">{{ getVotingModeLabel(election.voting_mode) }} · 후보 {{ election.total_candidates }}명</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-4">
+                                        <span :class="getStatusClass(election.status)" class="px-3 py-1 rounded-full text-xs font-medium">
+                                            {{ getStatusLabel(election.status) }}
+                                        </span>
+                                        <span class="text-xs text-gray-500">{{ formatDate(election.start_time) }}</span>
+                                    </div>
+                                </div>
+                                <div v-if="elections.length === 0" class="p-8 text-center text-gray-500">
+                                    <p>등록된 선거가 없습니다</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Activity Feed -->
+                        <div class="card rounded-2xl">
+                            <div class="flex items-center justify-between p-5 border-b border-white/5">
+                                <h3 class="font-semibold text-white">실시간 활동</h3>
+                                <span class="flex items-center gap-1.5 text-xs text-emerald-400">
+                                    <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></span>
+                                    Live
+                                </span>
+                            </div>
+                            <div class="p-4 space-y-4 max-h-80 overflow-y-auto">
+                                <div v-for="(activity, i) in recentActivities" :key="i" class="flex items-start gap-3">
+                                    <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" :class="activity.bgClass">
+                                        <svg class="w-4 h-4" :class="activity.iconClass" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="activity.icon"/>
+                                        </svg>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm text-gray-300">{{ activity.message }}</p>
+                                        <p class="text-xs text-gray-500 mt-0.5">{{ activity.time }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Elections View -->
+                <div v-if="currentView === 'elections'" class="animate-in">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+                        <div class="flex items-center gap-2 overflow-x-auto w-full sm:w-auto pb-2 sm:pb-0">
+                            <button @click="filterStatus = 'all'" :class="filterStatus === 'all' ? 'bg-primary-600 text-white' : 'bg-dark-800 text-gray-400 hover:bg-dark-700'" class="px-3 lg:px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap">전체</button>
+                            <button @click="filterStatus = 'active'" :class="filterStatus === 'active' ? 'bg-primary-600 text-white' : 'bg-dark-800 text-gray-400 hover:bg-dark-700'" class="px-3 lg:px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap">진행중</button>
+                            <button @click="filterStatus = 'pending'" :class="filterStatus === 'pending' ? 'bg-primary-600 text-white' : 'bg-dark-800 text-gray-400 hover:bg-dark-700'" class="px-3 lg:px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap">대기중</button>
+                            <button @click="filterStatus = 'completed'" :class="filterStatus === 'completed' ? 'bg-primary-600 text-white' : 'bg-dark-800 text-gray-400 hover:bg-dark-700'" class="px-3 lg:px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap">완료</button>
+                        </div>
+                        <button @click="showCreateModal = true" class="btn-primary text-white px-4 lg:px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 w-full sm:w-auto justify-center">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                            </svg>
+                            <span class="sm:inline">새 선거 만들기</span>
+                        </button>
+                    </div>
+
+                    <!-- Elections Table (Desktop) / Cards (Mobile) -->
+                    <div class="card rounded-2xl overflow-hidden">
+                        <!-- Desktop Table -->
+                        <table class="w-full hidden lg:table">
+                            <thead>
+                                <tr class="border-b border-white/5">
+                                    <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-5 py-4">선거 정보</th>
+                                    <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-5 py-4">투표 방식</th>
+                                    <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-5 py-4">기간</th>
+                                    <th class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-5 py-4">상태</th>
+                                    <th class="text-right text-xs font-semibold text-gray-500 uppercase tracking-wider px-5 py-4">작업</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-white/5">
+                                <tr v-for="election in filteredElections" :key="election.id" class="table-row">
+                                    <td class="px-5 py-4">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-10 h-10 rounded-xl flex items-center justify-center" :class="getStatusBgClass(election.status)">
+                                                <svg class="w-5 h-5" :class="getStatusIconClass(election.status)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                </svg>
+                                            </div>
+                                            <div>
+                                                <p class="font-medium text-white">{{ election.title }}</p>
+                                                <p class="text-sm text-gray-500">후보 {{ election.total_candidates }}명</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-5 py-4">
+                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-dark-900 text-gray-400 rounded-lg text-sm">
+                                            {{ getVotingModeLabel(election.voting_mode) }}
+                                        </span>
+                                    </td>
+                                    <td class="px-5 py-4">
+                                        <p class="text-sm text-white">{{ formatDate(election.start_time) }}</p>
+                                        <p class="text-xs text-gray-500">~ {{ formatDate(election.end_time) }}</p>
+                                    </td>
+                                    <td class="px-5 py-4">
+                                        <span :class="getStatusClass(election.status)" class="px-3 py-1.5 rounded-full text-xs font-semibold">
+                                            {{ getStatusLabel(election.status) }}
+                                        </span>
+                                    </td>
+                                    <td class="px-5 py-4 text-right">
+                                        <div class="flex items-center justify-end gap-2">
+                                            <button class="p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                                </svg>
+                                            </button>
+                                            <button class="p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <!-- Mobile Cards -->
+                        <div class="lg:hidden divide-y divide-white/5">
+                            <div v-for="election in filteredElections" :key="election.id" class="p-4">
+                                <div class="flex items-start justify-between mb-3">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-xl flex items-center justify-center" :class="getStatusBgClass(election.status)">
+                                            <svg class="w-5 h-5" :class="getStatusIconClass(election.status)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <p class="font-medium text-white">{{ election.title }}</p>
+                                            <p class="text-xs text-gray-500">후보 {{ election.total_candidates }}명</p>
+                                        </div>
+                                    </div>
+                                    <span :class="getStatusClass(election.status)" class="px-2.5 py-1 rounded-full text-xs font-semibold">
+                                        {{ getStatusLabel(election.status) }}
+                                    </span>
+                                </div>
+                                <div class="flex items-center justify-between text-sm">
+                                    <span class="text-gray-400">{{ getVotingModeLabel(election.voting_mode) }}</span>
+                                    <span class="text-gray-500">{{ formatDate(election.start_time) }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div v-if="filteredElections.length === 0" class="p-12 text-center">
+                            <div class="w-16 h-16 bg-dark-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <svg class="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                </svg>
+                            </div>
+                            <p class="text-gray-400 mb-2">선거가 없습니다</p>
+                            <p class="text-sm text-gray-500">새 선거를 만들어 시작하세요</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Other Views Placeholder -->
+                <div v-if="currentView === 'voters' || currentView === 'results'" class="animate-in">
+                    <div class="card rounded-2xl p-12 text-center">
+                        <div class="w-20 h-20 bg-dark-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-10 h-10 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-semibold text-white mb-2">{{ viewTitle }}</h3>
+                        <p class="text-gray-500">이 기능은 곧 제공됩니다</p>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- Create Election Modal -->
+        <div v-if="showCreateModal" class="fixed inset-0 z-50 flex items-end lg:items-center justify-center modal-backdrop" @click.self="showCreateModal = false">
+            <div class="bg-dark-850 rounded-t-2xl lg:rounded-2xl w-full lg:max-w-2xl max-h-[90vh] overflow-hidden shadow-2xl animate-in">
+                <div class="flex items-center justify-between px-6 py-4 border-b border-white/5">
+                    <h3 class="text-lg font-semibold text-white">새 선거 만들기</h3>
+                    <button @click="showCreateModal = false" class="p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+                    <form @submit.prevent="createElection" class="space-y-5">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">선거 제목</label>
+                            <input v-model="newElection.title" type="text" required placeholder="예: 2026년 제1회 정기총회 선거"
+                                   class="w-full bg-dark-900 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-primary-500/50">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">설명</label>
+                            <textarea v-model="newElection.description" rows="2" placeholder="선거에 대한 간단한 설명"
+                                      class="w-full bg-dark-900 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-primary-500/50 resize-none"></textarea>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">시작 시간</label>
+                                <input v-model="newElection.start_time" type="datetime-local" required
+                                       class="w-full bg-dark-900 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-500/50">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">종료 시간</label>
+                                <input v-model="newElection.end_time" type="datetime-local" required
+                                       class="w-full bg-dark-900 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary-500/50">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">투표 방식</label>
+                            <div class="grid grid-cols-3 gap-3">
+                                <label class="cursor-pointer">
+                                    <input type="radio" v-model="newElection.voting_mode" value="single" class="sr-only peer">
+                                    <div class="p-4 rounded-xl border-2 border-white/10 peer-checked:border-primary-500 peer-checked:bg-primary-500/10 transition-all text-center">
+                                        <p class="font-medium text-white text-sm">1인 1투표</p>
+                                        <p class="text-xs text-gray-500 mt-1">기본 방식</p>
+                                    </div>
+                                </label>
+                                <label class="cursor-pointer">
+                                    <input type="radio" v-model="newElection.voting_mode" value="multi_limited" class="sr-only peer">
+                                    <div class="p-4 rounded-xl border-2 border-white/10 peer-checked:border-primary-500 peer-checked:bg-primary-500/10 transition-all text-center">
+                                        <p class="font-medium text-white text-sm">복수 투표</p>
+                                        <p class="text-xs text-gray-500 mt-1">여러 후보 선택</p>
+                                    </div>
+                                </label>
+                                <label class="cursor-pointer">
+                                    <input type="radio" v-model="newElection.voting_mode" value="periodic_reset" class="sr-only peer">
+                                    <div class="p-4 rounded-xl border-2 border-white/10 peer-checked:border-primary-500 peer-checked:bg-primary-500/10 transition-all text-center">
+                                        <p class="font-medium text-white text-sm">주기적 리셋</p>
+                                        <p class="text-xs text-gray-500 mt-1">재투표 가능</p>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Voting Mode Options -->
+                        <div v-if="newElection.voting_mode === 'multi_limited'" class="grid grid-cols-2 gap-4 p-4 bg-dark-900 rounded-xl">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">최대 후보 수</label>
+                                <input v-model.number="newElection.max_candidates" type="number" min="1"
+                                       class="w-full bg-dark-800 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-primary-500/50">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">후보당 최대 투표</label>
+                                <input v-model.number="newElection.max_votes_per_candidate" type="number" min="1"
+                                       class="w-full bg-dark-800 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-primary-500/50">
+                            </div>
+                        </div>
+                        <div v-if="newElection.voting_mode === 'periodic_reset'" class="p-4 bg-dark-900 rounded-xl">
+                            <label class="block text-sm font-medium text-gray-300 mb-2">리셋 주기 (시간)</label>
+                            <input v-model.number="newElection.reset_interval_hours" type="number" min="1"
+                                   class="w-full md:w-1/2 bg-dark-800 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-primary-500/50">
+                        </div>
+
+                        <!-- Candidates -->
+                        <div>
+                            <div class="flex items-center justify-between mb-3">
+                                <label class="text-sm font-medium text-gray-300">후보자 목록</label>
+                                <button type="button" @click="addCandidate" class="text-sm text-primary-400 hover:text-primary-300 flex items-center gap-1">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                    </svg>
+                                    추가
+                                </button>
+                            </div>
+                            <div class="space-y-2">
+                                <div v-for="(candidate, index) in newElection.candidates" :key="index"
+                                     class="flex gap-2 items-center p-3 bg-dark-900 rounded-xl">
+                                    <span class="w-7 h-7 bg-primary-600/20 rounded-lg flex items-center justify-center text-primary-400 text-xs font-bold flex-shrink-0">
+                                        {{ index + 1 }}
+                                    </span>
+                                    <input v-model="candidate.name" type="text" placeholder="이름" required
+                                           class="flex-1 bg-dark-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-primary-500/50">
+                                    <input v-model="candidate.party" type="text" placeholder="소속"
+                                           class="flex-1 bg-dark-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-primary-500/50">
+                                    <input v-model.number="candidate.symbol_number" type="number" placeholder="#" required
+                                           class="w-16 bg-dark-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white text-center focus:outline-none focus:border-primary-500/50">
+                                    <button type="button" @click="removeCandidate(index)" :disabled="newElection.candidates.length <= 2"
+                                            class="p-2 rounded-lg transition-colors" :class="newElection.candidates.length <= 2 ? 'text-gray-600 cursor-not-allowed' : 'text-red-400 hover:bg-red-400/10'">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/5">
+                    <button @click="showCreateModal = false; resetForm()" class="px-5 py-2.5 rounded-xl font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors">
+                        취소
+                    </button>
+                    <button @click="createElection" :disabled="submitting" class="btn-primary text-white px-6 py-2.5 rounded-xl font-medium flex items-center gap-2 disabled:opacity-50">
+                        <svg v-if="submitting" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        {{ submitting ? '생성 중...' : '선거 생성' }}
+                    </button>
                 </div>
             </div>
+        </div>
 
-            <!-- Create Election Button -->
-            <div class="mb-6">
-                <button @click="showCreateForm = !showCreateForm"
-                        class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium shadow">
-                    + 새 선거 만들기
+        <!-- Mobile Bottom Navigation -->
+        <nav class="lg:hidden fixed bottom-0 left-0 right-0 bg-dark-850 border-t border-white/5 z-40">
+            <div class="flex items-center justify-around h-16">
+                <button @click="currentView = 'dashboard'"
+                        class="flex flex-col items-center justify-center flex-1 h-full transition-colors"
+                        :class="currentView === 'dashboard' ? 'text-primary-400' : 'text-gray-500'">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+                    </svg>
+                    <span class="text-[10px] mt-1 font-medium">대시보드</span>
+                </button>
+                <button @click="currentView = 'elections'"
+                        class="flex flex-col items-center justify-center flex-1 h-full transition-colors"
+                        :class="currentView === 'elections' ? 'text-primary-400' : 'text-gray-500'">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                    </svg>
+                    <span class="text-[10px] mt-1 font-medium">선거</span>
+                </button>
+                <button @click="currentView = 'voters'"
+                        class="flex flex-col items-center justify-center flex-1 h-full transition-colors"
+                        :class="currentView === 'voters' ? 'text-primary-400' : 'text-gray-500'">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                    </svg>
+                    <span class="text-[10px] mt-1 font-medium">유권자</span>
+                </button>
+                <button @click="currentView = 'results'"
+                        class="flex flex-col items-center justify-center flex-1 h-full transition-colors"
+                        :class="currentView === 'results' ? 'text-primary-400' : 'text-gray-500'">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                    </svg>
+                    <span class="text-[10px] mt-1 font-medium">결과</span>
                 </button>
             </div>
+            <div class="safe-area-bottom bg-dark-850"></div>
+        </nav>
 
-            <!-- Create Election Form -->
-            <div v-if="showCreateForm" class="bg-white rounded-lg shadow p-6 mb-8">
-                <h2 class="text-xl font-bold mb-4">새 선거 만들기</h2>
-                <form @submit.prevent="createElection" class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">선거 제목</label>
-                        <input v-model="newElection.title" type="text" required
-                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">설명</label>
-                        <textarea v-model="newElection.description" rows="2"
-                                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2"></textarea>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">시작 시간</label>
-                            <input v-model="newElection.start_time" type="datetime-local" required
-                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">종료 시간</label>
-                            <input v-model="newElection.end_time" type="datetime-local" required
-                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2">
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">투표 방식</label>
-                        <select v-model="newElection.voting_mode"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2">
-                            <option value="single">1인 1투표</option>
-                            <option value="multi_limited">복수 투표</option>
-                            <option value="periodic_reset">주기적 리셋</option>
-                        </select>
-                    </div>
-
-                    <!-- Voting Mode Options -->
-                    <div v-if="newElection.voting_mode === 'multi_limited'" class="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">최대 후보 수</label>
-                            <input v-model.number="newElection.max_candidates" type="number" min="1"
-                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">후보당 최대 투표</label>
-                            <input v-model.number="newElection.max_votes_per_candidate" type="number" min="1"
-                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2">
-                        </div>
-                    </div>
-                    <div v-if="newElection.voting_mode === 'periodic_reset'" class="p-4 bg-gray-50 rounded">
-                        <label class="block text-sm font-medium text-gray-700">리셋 주기 (시간)</label>
-                        <input v-model.number="newElection.reset_interval_hours" type="number" min="1"
-                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2">
-                    </div>
-
-                    <!-- Candidates -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">후보자</label>
-                        <div v-for="(candidate, index) in newElection.candidates" :key="index"
-                             class="flex gap-2 mb-2">
-                            <input v-model="candidate.name" type="text" placeholder="이름" required
-                                   class="flex-1 rounded-md border-gray-300 shadow-sm border p-2">
-                            <input v-model="candidate.party" type="text" placeholder="소속"
-                                   class="flex-1 rounded-md border-gray-300 shadow-sm border p-2">
-                            <input v-model.number="candidate.symbol_number" type="number" placeholder="기호" required
-                                   class="w-20 rounded-md border-gray-300 shadow-sm border p-2">
-                            <button type="button" @click="removeCandidate(index)"
-                                    class="text-red-600 hover:text-red-800 px-2">삭제</button>
-                        </div>
-                        <button type="button" @click="addCandidate"
-                                class="text-blue-600 hover:text-blue-800 text-sm">+ 후보자 추가</button>
-                    </div>
-
-                    <div class="flex gap-4">
-                        <button type="submit"
-                                class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg">
-                            선거 생성
-                        </button>
-                        <button type="button" @click="showCreateForm = false"
-                                class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-2 rounded-lg">
-                            취소
-                        </button>
-                    </div>
-                </form>
+        <!-- Toast Notifications -->
+        <div class="fixed bottom-20 lg:bottom-4 right-4 z-50 space-y-2">
+            <div v-for="toast in toasts" :key="toast.id"
+                 class="flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg animate-in"
+                 :class="{
+                     'bg-emerald-500/90 text-white': toast.type === 'success',
+                     'bg-red-500/90 text-white': toast.type === 'error',
+                     'bg-primary-500/90 text-white': toast.type === 'info'
+                 }">
+                <svg v-if="toast.type === 'success'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                <svg v-else-if="toast.type === 'error'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+                <span class="font-medium">{{ toast.message }}</span>
             </div>
-
-            <!-- Elections List -->
-            <div class="bg-white rounded-lg shadow">
-                <div class="px-6 py-4 border-b">
-                    <h2 class="text-xl font-bold">선거 목록</h2>
-                </div>
-                <div v-if="elections.length === 0" class="p-6 text-center text-gray-500">
-                    선거가 없습니다. 새 선거를 만들어 보세요.
-                </div>
-                <div v-else class="divide-y">
-                    <div v-for="election in elections" :key="election.id"
-                         class="p-6 hover:bg-gray-50">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <h3 class="text-lg font-medium">{{ election.title }}</h3>
-                                <p class="text-sm text-gray-500">{{ election.description }}</p>
-                                <div class="mt-2 flex items-center gap-4 text-sm text-gray-600">
-                                    <span>투표 방식: {{ getVotingModeLabel(election.voting_mode) }}</span>
-                                    <span>후보: {{ election.total_candidates }}명</span>
-                                </div>
-                            </div>
-                            <div class="text-right">
-                                <span :class="getStatusClass(election.status)"
-                                      class="px-3 py-1 rounded-full text-sm font-medium">
-                                    {{ getStatusLabel(election.status) }}
-                                </span>
-                                <div class="mt-2 text-sm text-gray-500">
-                                    {{ formatDate(election.start_time) }} ~ {{ formatDate(election.end_time) }}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
-
-        <!-- Footer -->
-        <footer class="bg-gray-800 text-white py-6 mt-12">
-            <div class="max-w-7xl mx-auto px-4 text-center">
-                <p>블록체인 모바일 투표 시스템 v1.0.0</p>
-                <p class="text-sm text-gray-400 mt-2">Powered by Hyperledger Fabric, CGS Encryption, ZKP</p>
-            </div>
-        </footer>
+        </div>
     </div>
 
     <script>
-        const { createApp, ref, computed, onMounted } = Vue;
+        const { createApp, ref, computed, onMounted, watch } = Vue;
 
         const API_BASE = '/api/v1';
 
         createApp({
             setup() {
                 const serverStatus = ref('checking');
-                const elections = ref([]);
-                const showCreateForm = ref(false);
+                const elections = ref([
+                    {
+                        id: 1,
+                        title: 'STAR VOTE 2026 - 올해의 스타',
+                        description: '연예인 인기투표 - 팬들이 직접 선정하는 올해의 스타',
+                        voting_mode: 'single',
+                        status: 'active',
+                        total_candidates: 8,
+                        start_time: new Date().toISOString(),
+                        end_time: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString()
+                    },
+                    {
+                        id: 2,
+                        title: '2026년 제1회 정기총회 선거',
+                        description: '제15대 회장 선출을 위한 선거',
+                        voting_mode: 'single',
+                        status: 'active',
+                        total_candidates: 3,
+                        start_time: new Date().toISOString(),
+                        end_time: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString()
+                    },
+                    {
+                        id: 3,
+                        title: '신규 사업 제안 투표',
+                        description: '2026년 신규 사업 진행 여부 결정',
+                        voting_mode: 'single',
+                        status: 'pending',
+                        total_candidates: 2,
+                        start_time: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+                        end_time: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
+                    },
+                    {
+                        id: 4,
+                        title: '2025년 예산안 승인',
+                        description: '2025년도 예산안 최종 승인 투표',
+                        voting_mode: 'single',
+                        status: 'completed',
+                        total_candidates: 2,
+                        start_time: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+                        end_time: new Date(Date.now() - 23 * 24 * 60 * 60 * 1000).toISOString()
+                    }
+                ]);
+                const currentView = ref('dashboard');
+                const showCreateModal = ref(false);
+                const loading = ref(true);
+                const submitting = ref(false);
+                const toasts = ref([]);
+                const filterStatus = ref('all');
+
+                // Mock data for dashboard
+                const totalVotes = ref(8805605);
+                const registeredVoters = ref(125000);
+                const votedCount = ref(98750);
+                const participationRate = ref(79);
+
                 const newElection = ref({
                     title: '',
                     description: '',
@@ -203,6 +842,33 @@
                     ]
                 });
 
+                const recentActivities = ref([
+                    { message: '새 투표가 기록되었습니다', time: '방금 전', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z', bgClass: 'bg-emerald-500/20', iconClass: 'text-emerald-400' },
+                    { message: '블록 #1284가 생성되었습니다', time: '2분 전', icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4', bgClass: 'bg-blue-500/20', iconClass: 'text-blue-400' },
+                    { message: '새 유권자가 등록되었습니다', time: '5분 전', icon: 'M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z', bgClass: 'bg-purple-500/20', iconClass: 'text-purple-400' },
+                    { message: 'ZKP 검증이 완료되었습니다', time: '8분 전', icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z', bgClass: 'bg-amber-500/20', iconClass: 'text-amber-400' },
+                    { message: '새 투표가 기록되었습니다', time: '12분 전', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z', bgClass: 'bg-emerald-500/20', iconClass: 'text-emerald-400' },
+                ]);
+
+                const currentDate = computed(() => {
+                    return new Date().toLocaleDateString('ko-KR', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        weekday: 'long'
+                    });
+                });
+
+                const viewTitle = computed(() => {
+                    const titles = {
+                        dashboard: '대시보드',
+                        elections: '선거 관리',
+                        voters: '유권자 관리',
+                        results: '개표 결과'
+                    };
+                    return titles[currentView.value] || '대시보드';
+                });
+
                 const activeElections = computed(() =>
                     elections.value.filter(e => e.status === 'active')
                 );
@@ -210,6 +876,19 @@
                 const completedElections = computed(() =>
                     elections.value.filter(e => e.status === 'completed')
                 );
+
+                const filteredElections = computed(() => {
+                    if (filterStatus.value === 'all') return elections.value;
+                    return elections.value.filter(e => e.status === filterStatus.value);
+                });
+
+                const showToast = (message, type = 'info') => {
+                    const id = Date.now();
+                    toasts.value.push({ id, message, type });
+                    setTimeout(() => {
+                        toasts.value = toasts.value.filter(t => t.id !== id);
+                    }, 4000);
+                };
 
                 const checkHealth = async () => {
                     try {
@@ -222,15 +901,24 @@
                 };
 
                 const fetchElections = async () => {
+                    loading.value = true;
                     try {
                         const res = await fetch(`${API_BASE}/elections`);
-                        elections.value = await res.json();
+                        const data = await res.json();
+                        if (data && data.length > 0) {
+                            elections.value = data;
+                        }
+                        // Keep sample data if API returns empty
                     } catch (e) {
-                        console.error('Failed to fetch elections:', e);
+                        console.error('Failed to fetch elections, using sample data');
+                        // Keep sample data on error
+                    } finally {
+                        loading.value = false;
                     }
                 };
 
                 const createElection = async () => {
+                    submitting.value = true;
                     try {
                         const payload = {
                             title: newElection.value.title,
@@ -253,16 +941,18 @@
                         });
 
                         if (res.ok) {
-                            showCreateForm.value = false;
+                            showCreateModal.value = false;
                             resetForm();
                             fetchElections();
-                            alert('선거가 생성되었습니다!');
+                            showToast('선거가 성공적으로 생성되었습니다', 'success');
                         } else {
                             const error = await res.json();
-                            alert('오류: ' + (error.detail || '선거 생성 실패'));
+                            showToast(error.detail || '선거 생성에 실패했습니다', 'error');
                         }
                     } catch (e) {
-                        alert('오류: ' + e.message);
+                        showToast('오류가 발생했습니다', 'error');
+                    } finally {
+                        submitting.value = false;
                     }
                 };
 
@@ -295,71 +985,128 @@
                 };
 
                 const getStatusLabel = (status) => {
-                    const labels = {
-                        draft: '초안',
-                        pending: '대기중',
-                        active: '진행중',
-                        closed: '마감',
-                        tallying: '집계중',
-                        completed: '완료',
-                        cancelled: '취소됨'
-                    };
+                    const labels = { draft: '초안', pending: '대기중', active: '진행중', closed: '마감', tallying: '집계중', completed: '완료', cancelled: '취소됨' };
                     return labels[status] || status;
                 };
 
                 const getStatusClass = (status) => {
                     const classes = {
-                        draft: 'bg-gray-100 text-gray-800',
-                        pending: 'bg-yellow-100 text-yellow-800',
-                        active: 'bg-green-100 text-green-800',
-                        closed: 'bg-red-100 text-red-800',
-                        tallying: 'bg-blue-100 text-blue-800',
-                        completed: 'bg-purple-100 text-purple-800',
-                        cancelled: 'bg-gray-100 text-gray-500'
+                        draft: 'bg-gray-500/20 text-gray-400',
+                        pending: 'bg-amber-500/20 text-amber-400',
+                        active: 'bg-emerald-500/20 text-emerald-400',
+                        closed: 'bg-red-500/20 text-red-400',
+                        tallying: 'bg-blue-500/20 text-blue-400',
+                        completed: 'bg-purple-500/20 text-purple-400',
+                        cancelled: 'bg-gray-500/20 text-gray-500'
                     };
-                    return classes[status] || 'bg-gray-100 text-gray-800';
+                    return classes[status] || 'bg-gray-500/20 text-gray-400';
+                };
+
+                const getStatusBgClass = (status) => {
+                    const classes = { draft: 'bg-gray-500/20', pending: 'bg-amber-500/20', active: 'bg-emerald-500/20', closed: 'bg-red-500/20', tallying: 'bg-blue-500/20', completed: 'bg-purple-500/20', cancelled: 'bg-gray-500/20' };
+                    return classes[status] || 'bg-gray-500/20';
+                };
+
+                const getStatusIconClass = (status) => {
+                    const classes = { draft: 'text-gray-400', pending: 'text-amber-400', active: 'text-emerald-400', closed: 'text-red-400', tallying: 'text-blue-400', completed: 'text-purple-400', cancelled: 'text-gray-500' };
+                    return classes[status] || 'text-gray-400';
                 };
 
                 const getVotingModeLabel = (mode) => {
-                    const labels = {
-                        single: '1인 1투표',
-                        multi_limited: '복수 투표',
-                        periodic_reset: '주기적 리셋'
-                    };
+                    const labels = { single: '1인 1투표', multi_limited: '복수 투표', periodic_reset: '주기적 리셋' };
                     return labels[mode] || mode;
                 };
 
                 const formatDate = (dateStr) => {
                     if (!dateStr) return '-';
-                    return new Date(dateStr).toLocaleString('ko-KR', {
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    });
+                    return new Date(dateStr).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                };
+
+                const initChart = () => {
+                    const options = {
+                        series: [{
+                            name: '투표수',
+                            data: [312, 456, 287, 534, 412, 623, 489]
+                        }],
+                        chart: {
+                            type: 'area',
+                            height: 256,
+                            toolbar: { show: false },
+                            background: 'transparent',
+                            fontFamily: 'Pretendard, sans-serif'
+                        },
+                        colors: ['#5a67f2'],
+                        fill: {
+                            type: 'gradient',
+                            gradient: {
+                                shadeIntensity: 1,
+                                opacityFrom: 0.4,
+                                opacityTo: 0,
+                                stops: [0, 100]
+                            }
+                        },
+                        stroke: { curve: 'smooth', width: 2 },
+                        grid: {
+                            borderColor: 'rgba(255,255,255,0.05)',
+                            strokeDashArray: 4
+                        },
+                        xaxis: {
+                            categories: ['월', '화', '수', '목', '금', '토', '일'],
+                            labels: { style: { colors: '#6b7280' } },
+                            axisBorder: { show: false },
+                            axisTicks: { show: false }
+                        },
+                        yaxis: {
+                            labels: { style: { colors: '#6b7280' } }
+                        },
+                        tooltip: {
+                            theme: 'dark',
+                            x: { show: false }
+                        },
+                        dataLabels: { enabled: false }
+                    };
+
+                    const chart = new ApexCharts(document.querySelector("#voteChart"), options);
+                    chart.render();
                 };
 
                 onMounted(() => {
                     checkHealth();
                     fetchElections();
                     setInterval(checkHealth, 30000);
+                    setTimeout(initChart, 100);
                 });
 
                 return {
                     serverStatus,
                     elections,
-                    showCreateForm,
+                    currentView,
+                    showCreateModal,
+                    loading,
+                    submitting,
+                    toasts,
+                    filterStatus,
                     newElection,
+                    totalVotes,
+                    registeredVoters,
+                    votedCount,
+                    participationRate,
+                    recentActivities,
+                    currentDate,
+                    viewTitle,
                     activeElections,
                     completedElections,
+                    filteredElections,
                     createElection,
                     addCandidate,
                     removeCandidate,
                     getStatusLabel,
                     getStatusClass,
+                    getStatusBgClass,
+                    getStatusIconClass,
                     getVotingModeLabel,
-                    formatDate
+                    formatDate,
+                    resetForm
                 };
             }
         }).mount('#app');

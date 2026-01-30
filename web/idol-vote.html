@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0f0f1a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>STAR VOTE 2026 - 올해의 스타</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Pretendard', 'sans-serif'],
+                    },
+                },
+            },
+        }
+    </script>
+    <style>
+        [v-cloak] { display: none; }
+        * { -webkit-tap-highlight-color: transparent; }
+
+        body {
+            background: #0f0f1a;
+            overflow-x: hidden;
+        }
+
+        .safe-top { padding-top: env(safe-area-inset-top, 0px); }
+        .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
+
+        /* Animated gradient background */
+        .bg-animated {
+            background: linear-gradient(-45deg, #0f0f1a, #1a1a2e, #16213e, #0f0f1a);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+        }
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Glow effects */
+        .glow-pink { box-shadow: 0 0 40px rgba(236, 72, 153, 0.3), 0 0 80px rgba(236, 72, 153, 0.1); }
+        .glow-purple { box-shadow: 0 0 40px rgba(168, 85, 247, 0.3), 0 0 80px rgba(168, 85, 247, 0.1); }
+        .glow-blue { box-shadow: 0 0 40px rgba(59, 130, 246, 0.3), 0 0 80px rgba(59, 130, 246, 0.1); }
+        .glow-gold { box-shadow: 0 0 40px rgba(251, 191, 36, 0.4), 0 0 80px rgba(251, 191, 36, 0.2); }
+
+        .text-glow {
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5), 0 0 40px rgba(236, 72, 153, 0.5);
+        }
+
+        /* Glass effect */
+        .glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Card hover effect */
+        .idol-card {
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform-style: preserve-3d;
+        }
+        .idol-card:hover {
+            transform: translateY(-10px) scale(1.02);
+        }
+        .idol-card.selected {
+            transform: translateY(-10px) scale(1.05);
+        }
+
+        /* Shine effect on cards */
+        .shine {
+            position: relative;
+            overflow: hidden;
+        }
+        .shine::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                to bottom right,
+                rgba(255, 255, 255, 0) 0%,
+                rgba(255, 255, 255, 0) 40%,
+                rgba(255, 255, 255, 0.1) 50%,
+                rgba(255, 255, 255, 0) 60%,
+                rgba(255, 255, 255, 0) 100%
+            );
+            transform: rotate(45deg);
+            animation: shine 3s infinite;
+        }
+        @keyframes shine {
+            0% { transform: translateX(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) rotate(45deg); }
+        }
+
+        /* Floating animation */
+        .float {
+            animation: float 6s ease-in-out infinite;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+
+        /* Pulse ring */
+        .pulse-ring {
+            animation: pulseRing 2s infinite;
+        }
+        @keyframes pulseRing {
+            0% { transform: scale(0.8); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+
+        /* Progress bar animation */
+        .progress-animate {
+            animation: progressGrow 1s ease-out forwards;
+        }
+        @keyframes progressGrow {
+            from { width: 0%; }
+        }
+
+        /* Vote button */
+        .btn-vote {
+            background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 50%, #3b82f6 100%);
+            background-size: 200% 200%;
+            animation: gradientMove 3s ease infinite;
+            transition: all 0.3s ease;
+        }
+        .btn-vote:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 40px rgba(236, 72, 153, 0.4);
+        }
+        .btn-vote:active {
+            transform: scale(0.98);
+        }
+        @keyframes gradientMove {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Crown animation */
+        .crown-float {
+            animation: crownFloat 2s ease-in-out infinite;
+        }
+        @keyframes crownFloat {
+            0%, 100% { transform: translateY(0) rotate(-5deg); }
+            50% { transform: translateY(-5px) rotate(5deg); }
+        }
+
+        /* Particle canvas */
+        #particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0f0f1a; }
+        ::-webkit-scrollbar-thumb { background: #3b82f6; border-radius: 3px; }
+
+        /* Video overlay */
+        .video-overlay {
+            background: linear-gradient(to bottom,
+                rgba(15, 15, 26, 0.3) 0%,
+                rgba(15, 15, 26, 0.7) 50%,
+                rgba(15, 15, 26, 1) 100%
+            );
+        }
+
+        /* Rank badge */
+        .rank-badge {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            box-shadow: 0 4px 15px rgba(251, 191, 36, 0.4);
+        }
+        .rank-badge.silver {
+            background: linear-gradient(135deg, #e5e7eb 0%, #9ca3af 100%);
+            box-shadow: 0 4px 15px rgba(156, 163, 175, 0.4);
+        }
+        .rank-badge.bronze {
+            background: linear-gradient(135deg, #d97706 0%, #92400e 100%);
+            box-shadow: 0 4px 15px rgba(217, 119, 6, 0.4);
+        }
+
+        /* Modal */
+        .modal-enter { animation: modalIn 0.3s ease-out; }
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.9) translateY(20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        /* Live badge pulse */
+        .live-pulse {
+            animation: livePulse 1.5s ease-in-out infinite;
+        }
+        @keyframes livePulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body class="font-sans text-white">
+    <canvas id="particles"></canvas>
+
+    <div id="app" v-cloak class="relative z-10 min-h-screen bg-animated">
+        <!-- Header -->
+        <header class="fixed top-0 left-0 right-0 z-50 safe-top">
+            <div class="glass border-b border-white/10">
+                <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="text-2xl font-black bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 bg-clip-text text-transparent">
+                            STAR VOTE
+                        </div>
+                        <span class="px-2 py-0.5 bg-gradient-to-r from-pink-500 to-purple-500 rounded text-[10px] font-bold">2026</span>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div class="flex items-center gap-2 px-3 py-1.5 glass rounded-full">
+                            <span class="w-2 h-2 bg-red-500 rounded-full live-pulse"></span>
+                            <span class="text-xs font-medium">LIVE</span>
+                            <span class="text-xs text-gray-400">{{ formatNumber(totalVotes) }}표</span>
+                        </div>
+                        <button class="w-10 h-10 glass rounded-full flex items-center justify-center">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Hero Section with Video -->
+        <section class="relative h-[60vh] min-h-[400px] overflow-hidden pt-16">
+            <!-- Video Background -->
+            <div class="absolute inset-0">
+                <video autoplay muted loop playsinline class="w-full h-full object-cover">
+                    <source src="https://assets.mixkit.co/videos/preview/mixkit-colorful-neon-light-leaks-loop-background-26309-large.mp4" type="video/mp4">
+                </video>
+                <div class="video-overlay absolute inset-0"></div>
+            </div>
+
+            <!-- Hero Content -->
+            <div class="relative z-10 h-full flex flex-col items-center justify-center text-center px-4">
+                <div class="mb-4 flex items-center gap-2">
+                    <span class="text-4xl crown-float">👑</span>
+                </div>
+                <h1 class="text-4xl md:text-6xl font-black mb-4 text-glow">
+                    <span class="bg-gradient-to-r from-pink-400 via-purple-400 to-blue-400 bg-clip-text text-transparent">
+                        올해의 스타
+                    </span>
+                </h1>
+                <p class="text-lg text-gray-300 mb-6">2026 STAR OF THE YEAR</p>
+                <div class="flex items-center gap-6 text-sm">
+                    <div class="text-center">
+                        <p class="text-2xl font-bold text-pink-400">{{ candidates.length }}</p>
+                        <p class="text-gray-400">후보</p>
+                    </div>
+                    <div class="w-px h-10 bg-white/20"></div>
+                    <div class="text-center">
+                        <p class="text-2xl font-bold text-purple-400">{{ formatNumber(totalVotes) }}</p>
+                        <p class="text-gray-400">총 투표</p>
+                    </div>
+                    <div class="w-px h-10 bg-white/20"></div>
+                    <div class="text-center">
+                        <p class="text-2xl font-bold text-blue-400">{{ remainingDays }}일</p>
+                        <p class="text-gray-400">남음</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scroll indicator -->
+            <div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 animate-bounce">
+                <span class="text-xs text-gray-400">스크롤</span>
+                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
+                </svg>
+            </div>
+        </section>
+
+        <!-- Top 3 Section -->
+        <section class="py-12 px-4">
+            <div class="max-w-6xl mx-auto">
+                <div class="text-center mb-10">
+                    <h2 class="text-2xl font-bold mb-2">🏆 실시간 TOP 3</h2>
+                    <p class="text-gray-400">현재 가장 많은 표를 받은 스타</p>
+                </div>
+
+                <div class="grid grid-cols-3 gap-4 md:gap-8">
+                    <!-- 2nd Place -->
+                    <div class="order-1 md:order-1 pt-8">
+                        <div class="idol-card glass rounded-3xl overflow-hidden shine glow-purple"
+                             @click="openModal(sortedCandidates[1])">
+                            <div class="relative">
+                                <img :src="sortedCandidates[1]?.image" class="w-full aspect-[3/4] object-cover">
+                                <div class="absolute top-3 left-3">
+                                    <div class="rank-badge silver w-10 h-10 rounded-full flex items-center justify-center text-lg font-black text-gray-800">
+                                        2
+                                    </div>
+                                </div>
+                                <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
+                                    <p class="font-bold text-lg">{{ sortedCandidates[1]?.name }}</p>
+                                    <p class="text-sm text-gray-300">{{ sortedCandidates[1]?.group }}</p>
+                                </div>
+                            </div>
+                            <div class="p-4">
+                                <div class="flex justify-between text-sm mb-2">
+                                    <span class="text-gray-400">득표수</span>
+                                    <span class="font-bold text-purple-400">{{ formatNumber(sortedCandidates[1]?.votes) }}</span>
+                                </div>
+                                <div class="h-2 bg-white/10 rounded-full overflow-hidden">
+                                    <div class="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full progress-animate"
+                                         :style="{width: getVotePercent(sortedCandidates[1]?.votes) + '%'}"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 1st Place -->
+                    <div class="order-0 md:order-0 -mt-4">
+                        <div class="idol-card glass rounded-3xl overflow-hidden shine glow-gold relative"
+                             @click="openModal(sortedCandidates[0])">
+                            <!-- Crown -->
+                            <div class="absolute -top-4 left-1/2 -translate-x-1/2 z-20 text-5xl crown-float">👑</div>
+                            <div class="relative">
+                                <img :src="sortedCandidates[0]?.image" class="w-full aspect-[3/4] object-cover">
+                                <div class="absolute top-3 left-3">
+                                    <div class="rank-badge w-12 h-12 rounded-full flex items-center justify-center text-xl font-black text-gray-800">
+                                        1
+                                    </div>
+                                </div>
+                                <div class="absolute inset-0 flex items-center justify-center">
+                                    <div class="absolute w-32 h-32 border-4 border-yellow-400/30 rounded-full pulse-ring"></div>
+                                </div>
+                                <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
+                                    <p class="font-bold text-xl">{{ sortedCandidates[0]?.name }}</p>
+                                    <p class="text-sm text-gray-300">{{ sortedCandidates[0]?.group }}</p>
+                                </div>
+                            </div>
+                            <div class="p-4">
+                                <div class="flex justify-between text-sm mb-2">
+                                    <span class="text-gray-400">득표수</span>
+                                    <span class="font-bold text-yellow-400">{{ formatNumber(sortedCandidates[0]?.votes) }}</span>
+                                </div>
+                                <div class="h-2 bg-white/10 rounded-full overflow-hidden">
+                                    <div class="h-full bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full progress-animate"
+                                         :style="{width: getVotePercent(sortedCandidates[0]?.votes) + '%'}"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3rd Place -->
+                    <div class="order-2 md:order-2 pt-12">
+                        <div class="idol-card glass rounded-3xl overflow-hidden shine glow-blue"
+                             @click="openModal(sortedCandidates[2])">
+                            <div class="relative">
+                                <img :src="sortedCandidates[2]?.image" class="w-full aspect-[3/4] object-cover">
+                                <div class="absolute top-3 left-3">
+                                    <div class="rank-badge bronze w-10 h-10 rounded-full flex items-center justify-center text-lg font-black text-white">
+                                        3
+                                    </div>
+                                </div>
+                                <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
+                                    <p class="font-bold text-lg">{{ sortedCandidates[2]?.name }}</p>
+                                    <p class="text-sm text-gray-300">{{ sortedCandidates[2]?.group }}</p>
+                                </div>
+                            </div>
+                            <div class="p-4">
+                                <div class="flex justify-between text-sm mb-2">
+                                    <span class="text-gray-400">득표수</span>
+                                    <span class="font-bold text-blue-400">{{ formatNumber(sortedCandidates[2]?.votes) }}</span>
+                                </div>
+                                <div class="h-2 bg-white/10 rounded-full overflow-hidden">
+                                    <div class="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full progress-animate"
+                                         :style="{width: getVotePercent(sortedCandidates[2]?.votes) + '%'}"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- All Candidates -->
+        <section class="py-12 px-4">
+            <div class="max-w-6xl mx-auto">
+                <div class="flex items-center justify-between mb-8">
+                    <h2 class="text-2xl font-bold">전체 후보</h2>
+                    <div class="flex items-center gap-2">
+                        <button @click="sortBy = 'votes'"
+                                :class="sortBy === 'votes' ? 'bg-white/20' : 'bg-white/5'"
+                                class="px-4 py-2 rounded-full text-sm transition-colors">
+                            인기순
+                        </button>
+                        <button @click="sortBy = 'name'"
+                                :class="sortBy === 'name' ? 'bg-white/20' : 'bg-white/5'"
+                                class="px-4 py-2 rounded-full text-sm transition-colors">
+                            이름순
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div v-for="(candidate, index) in displayCandidates" :key="candidate.id"
+                         class="idol-card glass rounded-2xl overflow-hidden cursor-pointer"
+                         :class="{'glow-pink': selectedCandidate?.id === candidate.id}"
+                         @click="openModal(candidate)">
+                        <div class="relative">
+                            <img :src="candidate.image" class="w-full aspect-square object-cover">
+                            <div class="absolute top-2 right-2 px-2 py-1 glass rounded-full text-xs font-bold">
+                                #{{ getRank(candidate) }}
+                            </div>
+                            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3">
+                                <p class="font-bold truncate">{{ candidate.name }}</p>
+                                <p class="text-xs text-gray-400">{{ candidate.group }}</p>
+                            </div>
+                        </div>
+                        <div class="p-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-pink-400 font-bold">{{ formatNumber(candidate.votes) }}표</span>
+                                <span class="text-xs text-gray-400">{{ getVotePercent(candidate.votes) }}%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Floating Vote Button -->
+        <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 safe-bottom">
+            <button v-if="selectedCandidate"
+                    @click="vote"
+                    class="btn-vote px-8 py-4 rounded-full font-bold text-lg flex items-center gap-3 shadow-2xl">
+                <img :src="selectedCandidate.image" class="w-10 h-10 rounded-full object-cover border-2 border-white">
+                <span>{{ selectedCandidate.name }}에게 투표</span>
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                </svg>
+            </button>
+            <button v-else
+                    class="glass px-8 py-4 rounded-full font-bold text-lg flex items-center gap-3">
+                <span class="text-gray-400">후보를 선택하세요</span>
+            </button>
+        </div>
+
+        <!-- Detail Modal -->
+        <div v-if="showModal"
+             class="fixed inset-0 z-50 flex items-end md:items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+             @click.self="showModal = false">
+            <div class="modal-enter glass rounded-t-3xl md:rounded-3xl w-full max-w-lg max-h-[85vh] overflow-hidden">
+                <!-- Media Section -->
+                <div class="relative">
+                    <div v-if="modalCandidate?.video" class="aspect-video bg-black">
+                        <video :src="modalCandidate.video" controls class="w-full h-full object-cover"></video>
+                    </div>
+                    <img v-else :src="modalCandidate?.image" class="w-full aspect-square object-cover">
+                    <button @click="showModal = false"
+                            class="absolute top-4 right-4 w-10 h-10 glass rounded-full flex items-center justify-center">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                    <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-6">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="px-3 py-1 bg-pink-500 rounded-full text-sm font-bold">#{{ getRank(modalCandidate) }}</span>
+                        </div>
+                        <h3 class="text-3xl font-black">{{ modalCandidate?.name }}</h3>
+                        <p class="text-gray-300">{{ modalCandidate?.group }}</p>
+                    </div>
+                </div>
+
+                <!-- Info Section -->
+                <div class="p-6 space-y-6 overflow-y-auto max-h-[40vh]">
+                    <!-- Stats -->
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="glass rounded-2xl p-4 text-center">
+                            <p class="text-2xl font-black text-pink-400">{{ formatNumber(modalCandidate?.votes) }}</p>
+                            <p class="text-xs text-gray-400">득표수</p>
+                        </div>
+                        <div class="glass rounded-2xl p-4 text-center">
+                            <p class="text-2xl font-black text-purple-400">{{ getVotePercent(modalCandidate?.votes) }}%</p>
+                            <p class="text-xs text-gray-400">득표율</p>
+                        </div>
+                        <div class="glass rounded-2xl p-4 text-center">
+                            <p class="text-2xl font-black text-blue-400">{{ modalCandidate?.fans }}</p>
+                            <p class="text-xs text-gray-400">팬덤 순위</p>
+                        </div>
+                    </div>
+
+                    <!-- Description -->
+                    <div>
+                        <h4 class="font-bold mb-2">프로필</h4>
+                        <p class="text-gray-400 text-sm leading-relaxed">{{ modalCandidate?.bio }}</p>
+                    </div>
+
+                    <!-- Gallery -->
+                    <div v-if="modalCandidate?.gallery?.length">
+                        <h4 class="font-bold mb-3">갤러리</h4>
+                        <div class="flex gap-2 overflow-x-auto pb-2">
+                            <img v-for="(img, i) in modalCandidate.gallery" :key="i"
+                                 :src="img" class="w-24 h-24 rounded-xl object-cover flex-shrink-0">
+                        </div>
+                    </div>
+
+                    <!-- Vote Button -->
+                    <button @click="selectAndVote(modalCandidate)"
+                            class="btn-vote w-full py-4 rounded-2xl font-bold text-lg">
+                        이 스타에게 투표하기 ❤️
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Vote Success Animation -->
+        <div v-if="showVoteSuccess" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+            <div class="text-center modal-enter">
+                <div class="text-8xl mb-6">🎉</div>
+                <h2 class="text-3xl font-black mb-2">투표 완료!</h2>
+                <p class="text-gray-400 mb-6">{{ votedCandidate?.name }}에게 투표했습니다</p>
+                <button @click="showVoteSuccess = false" class="btn-vote px-8 py-3 rounded-full font-bold">
+                    확인
+                </button>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="py-12 px-4 border-t border-white/10 mt-20">
+            <div class="max-w-6xl mx-auto text-center">
+                <p class="text-2xl font-black bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 bg-clip-text text-transparent mb-4">
+                    STAR VOTE 2026
+                </p>
+                <p class="text-gray-500 text-sm">
+                    Powered by VoteChain Blockchain Technology
+                </p>
+                <div class="mt-4 flex justify-center gap-6 text-gray-500">
+                    <a href="#" class="hover:text-white transition-colors">이용약관</a>
+                    <a href="#" class="hover:text-white transition-colors">개인정보처리방침</a>
+                    <a href="#" class="hover:text-white transition-colors">문의하기</a>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+
+        createApp({
+            setup() {
+                const sortBy = ref('votes');
+                const selectedCandidate = ref(null);
+                const showModal = ref(false);
+                const modalCandidate = ref(null);
+                const showVoteSuccess = ref(false);
+                const votedCandidate = ref(null);
+                const remainingDays = ref(15);
+
+                const candidates = ref([
+                    {
+                        id: 1,
+                        name: '김태연',
+                        group: 'STELLAR',
+                        image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop',
+                        video: 'https://assets.mixkit.co/videos/preview/mixkit-portrait-of-a-fashion-woman-with-silver-makeup-39875-large.mp4',
+                        votes: 1523847,
+                        fans: 1,
+                        bio: '2019년 데뷔 이후 꾸준한 사랑을 받고 있는 STELLAR의 메인보컬. 뛰어난 가창력과 무대 장악력으로 많은 팬들의 사랑을 받고 있습니다.',
+                        gallery: [
+                            'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=200&h=200&fit=crop',
+                            'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop',
+                            'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=200&h=200&fit=crop',
+                        ]
+                    },
+                    {
+                        id: 2,
+                        name: '박준혁',
+                        group: 'NOVA',
+                        image: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=400&fit=crop',
+                        votes: 1298562,
+                        fans: 2,
+                        bio: 'NOVA의 리더이자 메인댄서. 칼군무와 파워풀한 퍼포먼스로 유명합니다.',
+                        gallery: []
+                    },
+                    {
+                        id: 3,
+                        name: '이서연',
+                        group: 'BLOOM',
+                        image: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=400&h=400&fit=crop',
+                        votes: 1156234,
+                        fans: 3,
+                        bio: 'BLOOM의 비주얼 담당. 모델 출신으로 뛰어난 비주얼과 연기력을 겸비했습니다.',
+                        gallery: []
+                    },
+                    {
+                        id: 4,
+                        name: '정우진',
+                        group: 'ECLIPSE',
+                        image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop',
+                        votes: 987456,
+                        fans: 4,
+                        bio: 'ECLIPSE의 메인래퍼. 작사작곡 실력도 뛰어납니다.',
+                        gallery: []
+                    },
+                    {
+                        id: 5,
+                        name: '한소희',
+                        group: 'PRISM',
+                        image: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=400&h=400&fit=crop',
+                        votes: 876543,
+                        fans: 5,
+                        bio: 'PRISM의 메인보컬. 감성적인 음색으로 사랑받고 있습니다.',
+                        gallery: []
+                    },
+                    {
+                        id: 6,
+                        name: '최민수',
+                        group: 'ZENITH',
+                        image: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=400&h=400&fit=crop',
+                        votes: 765432,
+                        fans: 6,
+                        bio: 'ZENITH의 막내. 귀여운 매력과 뛰어난 예능감을 가지고 있습니다.',
+                        gallery: []
+                    },
+                    {
+                        id: 7,
+                        name: '강예린',
+                        group: 'AURORA',
+                        image: 'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=400&h=400&fit=crop',
+                        votes: 654321,
+                        fans: 7,
+                        bio: 'AURORA의 리더. 작곡가로서도 활발히 활동 중입니다.',
+                        gallery: []
+                    },
+                    {
+                        id: 8,
+                        name: '윤재현',
+                        group: 'ORBIT',
+                        image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop',
+                        votes: 543210,
+                        fans: 8,
+                        bio: 'ORBIT의 메인댄서. 독보적인 춤 실력을 자랑합니다.',
+                        gallery: []
+                    }
+                ]);
+
+                const totalVotes = computed(() =>
+                    candidates.value.reduce((sum, c) => sum + c.votes, 0)
+                );
+
+                const sortedCandidates = computed(() =>
+                    [...candidates.value].sort((a, b) => b.votes - a.votes)
+                );
+
+                const displayCandidates = computed(() => {
+                    if (sortBy.value === 'name') {
+                        return [...candidates.value].sort((a, b) => a.name.localeCompare(b.name));
+                    }
+                    return sortedCandidates.value;
+                });
+
+                const formatNumber = (num) => {
+                    if (!num) return '0';
+                    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+                    if (num >= 1000) return (num / 1000).toFixed(0) + 'K';
+                    return num.toLocaleString();
+                };
+
+                const getVotePercent = (votes) => {
+                    if (!votes || !totalVotes.value) return 0;
+                    return ((votes / totalVotes.value) * 100).toFixed(1);
+                };
+
+                const getRank = (candidate) => {
+                    if (!candidate) return 0;
+                    return sortedCandidates.value.findIndex(c => c.id === candidate.id) + 1;
+                };
+
+                const openModal = (candidate) => {
+                    modalCandidate.value = candidate;
+                    selectedCandidate.value = candidate;
+                    showModal.value = true;
+                };
+
+                const selectAndVote = (candidate) => {
+                    selectedCandidate.value = candidate;
+                    showModal.value = false;
+                    vote();
+                };
+
+                const vote = () => {
+                    if (!selectedCandidate.value) return;
+
+                    // Add vote
+                    const candidate = candidates.value.find(c => c.id === selectedCandidate.value.id);
+                    if (candidate) {
+                        candidate.votes += 1;
+                        votedCandidate.value = candidate;
+                        showVoteSuccess.value = true;
+
+                        // Confetti!
+                        confetti({
+                            particleCount: 100,
+                            spread: 70,
+                            origin: { y: 0.6 },
+                            colors: ['#ec4899', '#8b5cf6', '#3b82f6', '#fbbf24']
+                        });
+                    }
+
+                    selectedCandidate.value = null;
+                };
+
+                // Particle background
+                const initParticles = () => {
+                    const canvas = document.getElementById('particles');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = window.innerWidth;
+                    canvas.height = window.innerHeight;
+
+                    const particles = [];
+                    const particleCount = 50;
+
+                    for (let i = 0; i < particleCount; i++) {
+                        particles.push({
+                            x: Math.random() * canvas.width,
+                            y: Math.random() * canvas.height,
+                            radius: Math.random() * 2 + 1,
+                            vx: (Math.random() - 0.5) * 0.5,
+                            vy: (Math.random() - 0.5) * 0.5,
+                            color: ['#ec4899', '#8b5cf6', '#3b82f6'][Math.floor(Math.random() * 3)]
+                        });
+                    }
+
+                    const animate = () => {
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                        particles.forEach(p => {
+                            p.x += p.vx;
+                            p.y += p.vy;
+
+                            if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+                            if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+
+                            ctx.beginPath();
+                            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                            ctx.fillStyle = p.color + '40';
+                            ctx.fill();
+                        });
+
+                        requestAnimationFrame(animate);
+                    };
+
+                    animate();
+
+                    window.addEventListener('resize', () => {
+                        canvas.width = window.innerWidth;
+                        canvas.height = window.innerHeight;
+                    });
+                };
+
+                onMounted(() => {
+                    initParticles();
+                });
+
+                return {
+                    sortBy,
+                    candidates,
+                    totalVotes,
+                    sortedCandidates,
+                    displayCandidates,
+                    selectedCandidate,
+                    showModal,
+                    modalCandidate,
+                    showVoteSuccess,
+                    votedCandidate,
+                    remainingDays,
+                    formatNumber,
+                    getVotePercent,
+                    getRank,
+                    openModal,
+                    selectAndVote,
+                    vote
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#5a67f2"/>
+      <stop offset="100%" style="stop-color:#4549e6"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:rgba(255,255,255,0.2)"/>
+      <stop offset="100%" style="stop-color:rgba(255,255,255,0)"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="512" height="512" rx="108" fill="url(#bg)"/>
+  <!-- Shine overlay -->
+  <rect width="512" height="256" rx="108" fill="url(#shine)"/>
+  <!-- Shield icon -->
+  <g transform="translate(128, 96)">
+    <path d="M128 0C128 0 256 32 256 32C256 32 256 160 256 192C256 256 192 304 128 320C64 304 0 256 0 192C0 160 0 32 0 32C0 32 128 0 128 0Z" fill="rgba(255,255,255,0.15)" stroke="white" stroke-width="12"/>
+    <!-- Checkmark -->
+    <path d="M80 160L112 192L176 128" fill="none" stroke="white" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <!-- V letter accent -->
+  <g transform="translate(340, 340)">
+    <text x="0" y="80" font-family="Arial, sans-serif" font-size="100" font-weight="bold" fill="rgba(255,255,255,0.3)">V</text>
+  </g>
+</svg>
