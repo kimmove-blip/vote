@@ -39,6 +39,8 @@
         .safe-top { padding-top: env(safe-area-inset-top, 0px); }
         .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
         .pb-safe { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 100px); }
+        /* PWA 스탠드얼론 모드에서 헤더 높이 + safe-area 고려 */
+        .pt-header { padding-top: calc(env(safe-area-inset-top, 0px) + 3.5rem + 1rem); }
 
         /* Animated gradient background */
         .bg-animated {
@@ -219,7 +221,7 @@
         </header>
 
         <!-- Main Content -->
-        <main class="pt-20 pb-safe min-h-screen">
+        <main class="pt-header pb-safe min-h-screen">
 
             <!-- Home View -->
             <div v-if="currentView === 'home'" class="px-4 space-y-6">
@@ -326,15 +328,23 @@
                     <h2 class="text-lg font-bold mb-4 text-gray-400">완료된 투표</h2>
                     <div class="space-y-3">
                         <div v-for="election in completedElections" :key="election.id"
-                             class="glass rounded-xl p-4 opacity-50">
+                             @click="viewCompletedElection(election)"
+                             class="vote-card glass rounded-xl p-4 cursor-pointer"
+                             :class="election.is_star_vote ? 'glow-pink' : ''">
                             <div class="flex items-center justify-between">
-                                <div>
-                                    <h3 class="font-medium">{{ election.title }}</h3>
-                                    <p class="text-xs text-gray-500">투표 완료</p>
+                                <div class="flex items-center gap-2">
+                                    <span v-if="election.is_star_vote" class="text-lg">⭐</span>
+                                    <div>
+                                        <h3 class="font-medium">{{ election.title }}</h3>
+                                        <p class="text-xs text-green-400">투표 완료 ✓</p>
+                                    </div>
                                 </div>
-                                <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                </svg>
+                                <span class="text-purple-400 text-sm font-medium flex items-center gap-1">
+                                    결과보기
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                    </svg>
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -348,10 +358,14 @@
                     <h2 class="font-bold text-xl mb-2">{{ selectedElection?.title }}</h2>
                     <p class="text-gray-400 text-sm mb-3">{{ selectedElection?.description }}</p>
                     <div class="flex items-center gap-3">
-                        <span class="px-3 py-1 bg-purple-500/20 text-purple-400 text-xs font-medium rounded-full">
+                        <span v-if="selectedElection?.status === 'completed'"
+                              class="px-3 py-1 bg-green-500/20 text-green-400 text-xs font-medium rounded-full">
+                            투표 완료 ✓
+                        </span>
+                        <span v-else class="px-3 py-1 bg-purple-500/20 text-purple-400 text-xs font-medium rounded-full">
                             {{ getVotingModeLabel(selectedElection?.voting_mode) }}
                         </span>
-                        <span class="text-xs text-gray-500">{{ getRemainingTime(selectedElection?.end_time) }} 남음</span>
+                        <span v-if="selectedElection?.status !== 'completed'" class="text-xs text-gray-500">{{ getRemainingTime(selectedElection?.end_time) }} 남음</span>
                     </div>
                 </div>
 
@@ -448,11 +462,19 @@
                 <div class="modal-enter min-h-full">
                     <!-- Media -->
                     <div class="relative">
-                        <div v-if="currentMediaType === 'video'" class="aspect-square bg-black overflow-hidden">
+                        <div v-if="currentMediaType === 'video'" class="aspect-square bg-black overflow-hidden relative">
                             <video ref="starVideo" :src="currentMedia"
-                                   controls playsinline autoplay muted
+                                   playsinline autoplay muted loop
                                    :poster="starModalCandidate?.image"
+                                   @click="toggleMute"
                                    class="w-full h-full object-cover"></video>
+                            <!-- 음소거 상태 표시 버튼 -->
+                            <button @click="toggleMute"
+                                    class="absolute bottom-4 right-4 px-4 py-2 bg-black/60 backdrop-blur rounded-full flex items-center gap-2 transition-all active:scale-95">
+                                <span v-if="isMuted" class="text-lg">🔇</span>
+                                <span v-else class="text-lg">🔊</span>
+                                <span class="text-sm font-medium">{{ isMuted ? '탭하여 소리 켜기' : '소리 켜짐' }}</span>
+                            </button>
                         </div>
                         <img v-else :src="currentMedia" class="w-full aspect-square object-cover">
                         <!-- Close -->
@@ -508,18 +530,18 @@
                             <!-- 크라운 쏘기 버튼들 -->
                             <div class="flex gap-2">
                                 <button @click="sendCrown(starModalCandidate, 1)"
-                                        :disabled="userCrowns < 1"
-                                        class="flex-1 py-3 rounded-xl bg-gradient-to-r from-yellow-500 to-amber-600 font-bold text-sm disabled:opacity-50 disabled:grayscale transition-all active:scale-95">
+                                        class="flex-1 py-3 rounded-xl font-bold text-sm transition-all active:scale-95"
+                                        :class="userCrowns >= 1 ? 'bg-gradient-to-r from-yellow-500 to-amber-600' : 'bg-gray-600 opacity-50'">
                                     👑 1개
                                 </button>
                                 <button @click="sendCrown(starModalCandidate, 10)"
-                                        :disabled="userCrowns < 10"
-                                        class="flex-1 py-3 rounded-xl bg-gradient-to-r from-yellow-400 to-orange-500 font-bold text-sm disabled:opacity-50 disabled:grayscale transition-all active:scale-95">
+                                        class="flex-1 py-3 rounded-xl font-bold text-sm transition-all active:scale-95"
+                                        :class="userCrowns >= 10 ? 'bg-gradient-to-r from-yellow-400 to-orange-500' : 'bg-gray-600 opacity-50'">
                                     👑 10개
                                 </button>
                                 <button @click="sendCrown(starModalCandidate, 100)"
-                                        :disabled="userCrowns < 100"
-                                        class="flex-1 py-3 rounded-xl bg-gradient-to-r from-amber-400 to-red-500 font-bold text-sm disabled:opacity-50 disabled:grayscale transition-all active:scale-95">
+                                        class="flex-1 py-3 rounded-xl font-bold text-sm transition-all active:scale-95"
+                                        :class="userCrowns >= 100 ? 'bg-gradient-to-r from-amber-400 to-red-500' : 'bg-gray-600 opacity-50'">
                                     👑 100개
                                 </button>
                             </div>
@@ -574,9 +596,9 @@
                                        placeholder="응원 메시지를 남겨주세요..."
                                        class="flex-1 bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-sm placeholder-gray-500 focus:outline-none focus:border-pink-500">
                                 <button @click="addComment(starModalCandidate)"
-                                        :disabled="!newComment.trim()"
-                                        class="px-4 py-3 bg-gradient-to-r from-pink-500 to-purple-600 rounded-xl font-semibold text-sm disabled:opacity-50">
-                                    등록
+                                        class="px-4 py-3 rounded-xl font-semibold text-sm transition-all"
+                                        :class="newComment.trim() ? 'bg-gradient-to-r from-pink-500 to-purple-600' : 'bg-gray-600 opacity-50'">
+                                    👑10 등록
                                 </button>
                             </div>
                             <!-- 댓글 목록 -->
@@ -692,7 +714,7 @@
         </main>
 
         <!-- Bottom Action Bar -->
-        <div v-if="currentView === 'vote' || currentView === 'confirm'"
+        <div v-if="(currentView === 'vote' && selectedElection?.status !== 'completed') || currentView === 'confirm'"
              class="fixed bottom-0 left-0 right-0 z-40 glass border-t border-white/10 p-4 safe-bottom">
             <button v-if="currentView === 'vote'"
                     @click="goToConfirm"
@@ -740,6 +762,91 @@
             </div>
         </div>
 
+        <!-- 크라운 충전 Modal -->
+        <div v-if="showRechargeModal" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">
+            <div class="modal-enter glass rounded-3xl p-6 w-full max-w-sm">
+                <!-- 헤더 -->
+                <div class="text-center mb-6">
+                    <div class="w-20 h-20 bg-gradient-to-br from-yellow-400 to-amber-600 rounded-full flex items-center justify-center mx-auto mb-4 float">
+                        <span class="text-4xl">👑</span>
+                    </div>
+                    <h3 class="text-2xl font-black mb-1">크라운 충전</h3>
+                    <p class="text-gray-400 text-sm">크라운으로 스타를 응원하세요!</p>
+                    <p class="text-yellow-400 font-bold mt-2">현재 보유: {{ userCrowns.toLocaleString() }}개</p>
+                </div>
+
+                <!-- 충전 옵션 -->
+                <div class="space-y-3 mb-6">
+                    <button @click="purchaseCrowns(100, 1000)"
+                            class="w-full flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all active:scale-98">
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl">👑</span>
+                            <div class="text-left">
+                                <p class="font-bold">100 크라운</p>
+                                <p class="text-xs text-gray-500">입문자용</p>
+                            </div>
+                        </div>
+                        <span class="font-black text-yellow-400">₩1,000</span>
+                    </button>
+
+                    <button @click="purchaseCrowns(550, 5000)"
+                            class="w-full flex items-center justify-between p-4 rounded-2xl bg-gradient-to-r from-yellow-500/10 to-amber-500/10 border border-yellow-500/30 hover:from-yellow-500/20 hover:to-amber-500/20 transition-all active:scale-98">
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl">👑</span>
+                            <div class="text-left">
+                                <p class="font-bold">550 크라운 <span class="text-xs text-green-400 ml-1">+10%</span></p>
+                                <p class="text-xs text-gray-500">인기 상품</p>
+                            </div>
+                        </div>
+                        <span class="font-black text-yellow-400">₩5,000</span>
+                    </button>
+
+                    <button @click="purchaseCrowns(1200, 10000)"
+                            class="w-full flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all active:scale-98">
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl">👑</span>
+                            <div class="text-left">
+                                <p class="font-bold">1,200 크라운 <span class="text-xs text-green-400 ml-1">+20%</span></p>
+                                <p class="text-xs text-gray-500">알뜰 패키지</p>
+                            </div>
+                        </div>
+                        <span class="font-black text-yellow-400">₩10,000</span>
+                    </button>
+
+                    <button @click="purchaseCrowns(3500, 25000)"
+                            class="w-full flex items-center justify-between p-4 rounded-2xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/30 hover:from-purple-500/20 hover:to-pink-500/20 transition-all active:scale-98">
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl">💎</span>
+                            <div class="text-left">
+                                <p class="font-bold">3,500 크라운 <span class="text-xs text-green-400 ml-1">+40%</span></p>
+                                <p class="text-xs text-gray-500">VIP 패키지</p>
+                            </div>
+                        </div>
+                        <span class="font-black text-purple-400">₩25,000</span>
+                    </button>
+
+                    <button @click="purchaseCrowns(8000, 50000)"
+                            class="w-full flex items-center justify-between p-4 rounded-2xl bg-gradient-to-r from-amber-500/20 to-yellow-400/20 border border-amber-400/50 hover:from-amber-500/30 hover:to-yellow-400/30 transition-all active:scale-98 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 px-2 py-0.5 bg-gradient-to-r from-red-500 to-pink-500 text-xs font-bold rounded-bl-lg">BEST</div>
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl">🏆</span>
+                            <div class="text-left">
+                                <p class="font-bold">8,000 크라운 <span class="text-xs text-green-400 ml-1">+60%</span></p>
+                                <p class="text-xs text-gray-500">프리미엄 패키지</p>
+                            </div>
+                        </div>
+                        <span class="font-black text-amber-400">₩50,000</span>
+                    </button>
+                </div>
+
+                <!-- 닫기 버튼 -->
+                <button @click="showRechargeModal = false"
+                        class="w-full py-3 rounded-xl bg-white/10 font-semibold text-gray-400 hover:bg-white/20 transition-all">
+                    나중에 하기
+                </button>
+            </div>
+        </div>
+
     </div>
 
     <script>
@@ -753,6 +860,7 @@
                 const userCrowns = ref(500);
                 const submitting = ref(false);
                 const showBiometric = ref(false);
+                const showRechargeModal = ref(false);
 
                 const selectedElection = ref(null);
                 const selectedCandidates = ref([]);
@@ -760,6 +868,7 @@
                 const starModalCandidate = ref(null);
                 const currentMedia = ref('');
                 const currentMediaType = ref('image');
+                const isMuted = ref(true);
                 const newComment = ref('');
                 const comments = ref([
                     { id: 1, candidateId: 10, user: '별빛팬', text: '태연 언니 최고! 항상 응원해요 💕', time: '5분 전' },
@@ -888,6 +997,13 @@
                     window.scrollTo(0, 0);
                 };
 
+                const viewCompletedElection = (election) => {
+                    selectedElection.value = election;
+                    selectedCandidates.value = [];
+                    currentView.value = 'vote';
+                    window.scrollTo(0, 0);
+                };
+
                 const toggleCandidate = (candidate) => {
                     const mode = selectedElection.value?.voting_mode;
                     const idx = selectedCandidates.value.findIndex(c => c.id === candidate.id);
@@ -912,8 +1028,15 @@
 
                 const openStarModal = (candidate) => {
                     starModalCandidate.value = candidate;
-                    currentMedia.value = candidate.image;
-                    currentMediaType.value = 'image';
+                    // 동영상이 있으면 기본으로 동영상 재생
+                    if (candidate.video) {
+                        currentMedia.value = candidate.video;
+                        currentMediaType.value = 'video';
+                        isMuted.value = true; // 처음엔 음소거로 시작
+                    } else {
+                        currentMedia.value = candidate.image;
+                        currentMediaType.value = 'image';
+                    }
                     showStarModal.value = true;
                 };
 
@@ -927,6 +1050,22 @@
                 const setCurrentMedia = (src, type) => {
                     currentMedia.value = src;
                     currentMediaType.value = type;
+                    // 갤러리 선택 시 상단으로 스크롤
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    // 동영상 전환 시 음소거 상태 초기화
+                    if (type === 'video') {
+                        isMuted.value = true;
+                    }
+                };
+
+                const starVideo = ref(null);
+
+                const toggleMute = () => {
+                    const video = document.querySelector('video[ref="starVideo"]') || document.querySelector('.aspect-square video');
+                    if (video) {
+                        video.muted = !video.muted;
+                        isMuted.value = video.muted;
+                    }
                 };
 
                 const selectStarAndClose = (candidate) => {
@@ -941,6 +1080,12 @@
 
                 const addComment = (candidate) => {
                     if (!newComment.value.trim() || !candidate) return;
+                    // 댓글 작성에 10 크라운 필요
+                    if (userCrowns.value < 10) {
+                        showRechargeModal.value = true;
+                        return;
+                    }
+                    userCrowns.value -= 10;
                     comments.value.unshift({
                         id: Date.now(),
                         candidateId: candidate.id,
@@ -949,6 +1094,13 @@
                         time: '방금 전'
                     });
                     newComment.value = '';
+                    // 댓글 작성 효과
+                    confetti({
+                        particleCount: 30,
+                        spread: 50,
+                        origin: { y: 0.8 },
+                        colors: ['#ec4899', '#8b5cf6']
+                    });
                 };
 
                 const goToConfirm = () => {
@@ -981,12 +1133,9 @@
 
                     const election = elections.value.find(e => e.id === selectedElection.value.id);
                     if (election) {
-                        election.status = 'voted';
-                        completedElections.value.unshift({
-                            id: election.id,
-                            title: election.title,
-                            status: 'completed'
-                        });
+                        election.status = 'completed';
+                        // 전체 선거 데이터 저장 (결과 보기 및 크라운 전송용)
+                        completedElections.value.unshift({ ...election });
                         elections.value = elections.value.filter(e => e.id !== election.id);
                     }
                 };
@@ -1058,7 +1207,12 @@
                 };
 
                 const sendCrown = (candidate, amount) => {
-                    if (userCrowns.value < amount || !candidate) return;
+                    if (!candidate) return;
+                    // 크라운 부족하면 충전 화면으로
+                    if (userCrowns.value < amount) {
+                        showRechargeModal.value = true;
+                        return;
+                    }
                     userCrowns.value -= amount;
 
                     // 원본 데이터에서 후보자 찾아서 업데이트
@@ -1090,6 +1244,22 @@
                         spread: 60,
                         origin: { y: 0.7 },
                         colors: ['#ffd700', '#ffaa00', '#ff8c00']
+                    });
+                };
+
+                // 크라운 구매 (데모용 - 실제로는 결제 연동 필요)
+                const purchaseCrowns = (crowns, price) => {
+                    // 실제 앱에서는 여기서 결제 API 호출
+                    // 데모에서는 바로 크라운 추가
+                    userCrowns.value += crowns;
+                    showRechargeModal.value = false;
+
+                    // 구매 축하 효과
+                    confetti({
+                        particleCount: 150,
+                        spread: 100,
+                        origin: { y: 0.5 },
+                        colors: ['#ffd700', '#ffaa00', '#ff8c00', '#8b5cf6', '#ec4899']
                     });
                 };
 
@@ -1265,6 +1435,7 @@
                     voteTime,
                     headerTitle,
                     selectElection,
+                    viewCompletedElection,
                     toggleCandidate,
                     isSelected,
                     openStarModal,
@@ -1283,7 +1454,12 @@
                     getCrownPercent,
                     getVotePercent,
                     sendCrown,
-                    isConnected
+                    isConnected,
+                    showRechargeModal,
+                    purchaseCrowns,
+                    isMuted,
+                    starVideo,
+                    toggleMute
                 };
             }
         }).mount('#app');

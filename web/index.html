@@ -656,22 +656,37 @@
                             </div>
                             <div class="space-y-2">
                                 <div v-for="(candidate, index) in newElection.candidates" :key="index"
-                                     class="flex gap-2 items-center p-3 bg-dark-900 rounded-xl">
-                                    <span class="w-7 h-7 bg-primary-600/20 rounded-lg flex items-center justify-center text-primary-400 text-xs font-bold flex-shrink-0">
-                                        {{ index + 1 }}
-                                    </span>
-                                    <input v-model="candidate.name" type="text" placeholder="이름" required
-                                           class="flex-1 bg-dark-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-primary-500/50">
-                                    <input v-model="candidate.party" type="text" placeholder="소속"
-                                           class="flex-1 bg-dark-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-primary-500/50">
-                                    <input v-model.number="candidate.symbol_number" type="number" placeholder="#" required
-                                           class="w-16 bg-dark-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white text-center focus:outline-none focus:border-primary-500/50">
-                                    <button type="button" @click="removeCandidate(index)" :disabled="newElection.candidates.length <= 2"
-                                            class="p-2 rounded-lg transition-colors" :class="newElection.candidates.length <= 2 ? 'text-gray-600 cursor-not-allowed' : 'text-red-400 hover:bg-red-400/10'">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                        </svg>
-                                    </button>
+                                     class="p-3 bg-dark-900 rounded-xl space-y-2">
+                                    <div class="flex gap-2 items-center">
+                                        <span class="w-7 h-7 bg-primary-600/20 rounded-lg flex items-center justify-center text-primary-400 text-xs font-bold flex-shrink-0">
+                                            {{ index + 1 }}
+                                        </span>
+                                        <input v-model="candidate.name" type="text" placeholder="이름" required
+                                               class="flex-1 bg-dark-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-primary-500/50">
+                                        <input v-model="candidate.party" type="text" placeholder="소속"
+                                               class="flex-1 bg-dark-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-primary-500/50">
+                                        <input v-model.number="candidate.symbol_number" type="number" placeholder="#" required
+                                               class="w-16 bg-dark-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white text-center focus:outline-none focus:border-primary-500/50">
+                                        <button type="button" @click="openCandidateDetail(index)"
+                                                class="p-2 rounded-lg text-primary-400 hover:bg-primary-400/10 transition-colors" title="상세 편집">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                            </svg>
+                                        </button>
+                                        <button type="button" @click="removeCandidate(index)" :disabled="newElection.candidates.length <= 2"
+                                                class="p-2 rounded-lg transition-colors" :class="newElection.candidates.length <= 2 ? 'text-gray-600 cursor-not-allowed' : 'text-red-400 hover:bg-red-400/10'">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <!-- 미리보기 (설정된 경우) -->
+                                    <div v-if="candidate.image || candidate.video || candidate.bio" class="flex items-center gap-2 pl-9 text-xs text-gray-500">
+                                        <span v-if="candidate.image" class="flex items-center gap-1">📷 사진</span>
+                                        <span v-if="candidate.video" class="flex items-center gap-1">🎬 영상</span>
+                                        <span v-if="candidate.bio" class="flex items-center gap-1">📝 프로필</span>
+                                        <span v-if="candidate.gallery?.length" class="flex items-center gap-1">🖼️ 갤러리 {{ candidate.gallery.length }}개</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -687,6 +702,93 @@
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
                         {{ submitting ? '생성 중...' : '선거 생성' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Candidate Detail Modal -->
+        <div v-if="showCandidateModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop" @click.self="showCandidateModal = false">
+            <div class="w-full max-w-lg bg-dark-800 rounded-2xl shadow-2xl animate-in max-h-[90vh] overflow-y-auto">
+                <div class="flex items-center justify-between px-6 py-4 border-b border-white/5 sticky top-0 bg-dark-800">
+                    <h3 class="text-lg font-bold">후보자 상세 정보</h3>
+                    <button @click="showCandidateModal = false" class="p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="p-6 space-y-5" v-if="editingCandidate">
+                    <!-- 기본 정보 -->
+                    <div class="space-y-3">
+                        <h4 class="text-sm font-semibold text-gray-400">기본 정보</h4>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">이름</label>
+                                <input v-model="editingCandidate.name" type="text"
+                                       class="w-full bg-dark-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary-500/50">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">소속</label>
+                                <input v-model="editingCandidate.party" type="text"
+                                       class="w-full bg-dark-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary-500/50">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 프로필 사진 -->
+                    <div class="space-y-3">
+                        <h4 class="text-sm font-semibold text-gray-400">프로필 사진 URL</h4>
+                        <input v-model="editingCandidate.image" type="url" placeholder="https://example.com/photo.jpg"
+                               class="w-full bg-dark-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-primary-500/50">
+                        <div v-if="editingCandidate.image" class="flex items-center gap-3">
+                            <img :src="editingCandidate.image" class="w-20 h-20 object-cover rounded-lg" @error="editingCandidate.image = ''">
+                            <span class="text-xs text-green-400">✓ 이미지 미리보기</span>
+                        </div>
+                    </div>
+
+                    <!-- 프로필 동영상 -->
+                    <div class="space-y-3">
+                        <h4 class="text-sm font-semibold text-gray-400">프로필 동영상 URL</h4>
+                        <input v-model="editingCandidate.video" type="url" placeholder="https://example.com/video.mp4"
+                               class="w-full bg-dark-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-primary-500/50">
+                        <p class="text-xs text-gray-500">MP4 형식 권장, 직접 링크 필요</p>
+                    </div>
+
+                    <!-- 소개글 -->
+                    <div class="space-y-3">
+                        <h4 class="text-sm font-semibold text-gray-400">소개글 (프로필)</h4>
+                        <textarea v-model="editingCandidate.bio" rows="3" placeholder="후보자 소개를 입력하세요..."
+                                  class="w-full bg-dark-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-primary-500/50 resize-none"></textarea>
+                    </div>
+
+                    <!-- 갤러리 -->
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <h4 class="text-sm font-semibold text-gray-400">갤러리 이미지</h4>
+                            <button type="button" @click="addGalleryImage" class="text-xs text-primary-400 hover:text-primary-300">+ 추가</button>
+                        </div>
+                        <div class="space-y-2">
+                            <div v-for="(img, idx) in (editingCandidate.gallery || [])" :key="idx" class="flex gap-2 items-center">
+                                <input v-model="editingCandidate.gallery[idx]" type="url" placeholder="이미지 URL"
+                                       class="flex-1 bg-dark-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-primary-500/50">
+                                <img v-if="editingCandidate.gallery[idx]" :src="editingCandidate.gallery[idx]" class="w-10 h-10 object-cover rounded" @error="editingCandidate.gallery[idx] = ''">
+                                <button type="button" @click="removeGalleryImage(idx)" class="p-2 text-red-400 hover:bg-red-400/10 rounded-lg">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-500">최대 10개까지 추가 가능</p>
+                    </div>
+                </div>
+                <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/5 sticky bottom-0 bg-dark-800">
+                    <button @click="showCandidateModal = false" class="px-5 py-2.5 rounded-xl font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors">
+                        취소
+                    </button>
+                    <button @click="saveCandidateDetail" class="btn-primary text-white px-6 py-2.5 rounded-xl font-medium">
+                        저장
                     </button>
                 </div>
             </div>
@@ -803,6 +905,9 @@
                 ]);
                 const currentView = ref('dashboard');
                 const showCreateModal = ref(false);
+                const showCandidateModal = ref(false);
+                const editingCandidateIndex = ref(-1);
+                const editingCandidate = ref(null);
                 const loading = ref(true);
                 const submitting = ref(false);
                 const toasts = ref([]);
@@ -824,8 +929,8 @@
                     max_votes_per_candidate: 1,
                     reset_interval_hours: 24,
                     candidates: [
-                        { name: '', party: '', symbol_number: 1 },
-                        { name: '', party: '', symbol_number: 2 }
+                        { name: '', party: '', symbol_number: 1, image: '', video: '', bio: '', gallery: [] },
+                        { name: '', party: '', symbol_number: 2, image: '', video: '', bio: '', gallery: [] }
                     ]
                 });
 
@@ -954,21 +1059,63 @@
                         max_votes_per_candidate: 1,
                         reset_interval_hours: 24,
                         candidates: [
-                            { name: '', party: '', symbol_number: 1 },
-                            { name: '', party: '', symbol_number: 2 }
+                            { name: '', party: '', symbol_number: 1, image: '', video: '', bio: '', gallery: [] },
+                            { name: '', party: '', symbol_number: 2, image: '', video: '', bio: '', gallery: [] }
                         ]
                     };
                 };
 
                 const addCandidate = () => {
                     const nextNum = newElection.value.candidates.length + 1;
-                    newElection.value.candidates.push({ name: '', party: '', symbol_number: nextNum });
+                    newElection.value.candidates.push({ name: '', party: '', symbol_number: nextNum, image: '', video: '', bio: '', gallery: [] });
                 };
 
                 const removeCandidate = (index) => {
                     if (newElection.value.candidates.length > 2) {
                         newElection.value.candidates.splice(index, 1);
                     }
+                };
+
+                // 후보자 상세 편집
+                const openCandidateDetail = (index) => {
+                    editingCandidateIndex.value = index;
+                    const candidate = newElection.value.candidates[index];
+                    editingCandidate.value = {
+                        ...candidate,
+                        image: candidate.image || '',
+                        video: candidate.video || '',
+                        bio: candidate.bio || '',
+                        gallery: candidate.gallery ? [...candidate.gallery] : []
+                    };
+                    showCandidateModal.value = true;
+                };
+
+                const saveCandidateDetail = () => {
+                    if (editingCandidateIndex.value >= 0 && editingCandidate.value) {
+                        // 빈 갤러리 URL 제거
+                        const gallery = (editingCandidate.value.gallery || []).filter(url => url && url.trim());
+                        newElection.value.candidates[editingCandidateIndex.value] = {
+                            ...newElection.value.candidates[editingCandidateIndex.value],
+                            ...editingCandidate.value,
+                            gallery
+                        };
+                    }
+                    showCandidateModal.value = false;
+                    editingCandidate.value = null;
+                    editingCandidateIndex.value = -1;
+                };
+
+                const addGalleryImage = () => {
+                    if (!editingCandidate.value.gallery) {
+                        editingCandidate.value.gallery = [];
+                    }
+                    if (editingCandidate.value.gallery.length < 10) {
+                        editingCandidate.value.gallery.push('');
+                    }
+                };
+
+                const removeGalleryImage = (index) => {
+                    editingCandidate.value.gallery.splice(index, 1);
                 };
 
                 const getStatusLabel = (status) => {
@@ -1069,6 +1216,8 @@
                     elections,
                     currentView,
                     showCreateModal,
+                    showCandidateModal,
+                    editingCandidate,
                     loading,
                     submitting,
                     toasts,
@@ -1087,6 +1236,10 @@
                     createElection,
                     addCandidate,
                     removeCandidate,
+                    openCandidateDetail,
+                    saveCandidateDetail,
+                    addGalleryImage,
+                    removeGalleryImage,
                     getStatusLabel,
                     getStatusClass,
                     getStatusBgClass,
