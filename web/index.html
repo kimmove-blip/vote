@@ -465,7 +465,7 @@
                             </thead>
                             <tbody class="divide-y divide-white/5">
                                 <tr v-for="election in filteredElections" :key="election.id" class="table-row">
-                                    <td class="px-5 py-4">
+                                    <td class="px-5 py-4 cursor-pointer hover:bg-white/5 transition-colors" @click="editElection(election)">
                                         <div class="flex items-center gap-3">
                                             <div class="w-10 h-10 rounded-xl flex items-center justify-center" :class="getStatusBgClass(election.status)">
                                                 <svg class="w-5 h-5" :class="getStatusIconClass(election.status)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -512,7 +512,7 @@
                         </table>
                         <!-- Mobile Cards -->
                         <div class="lg:hidden divide-y divide-white/5">
-                            <div v-for="election in filteredElections" :key="election.id" class="p-4">
+                            <div v-for="election in filteredElections" :key="election.id" @click="editElection(election)" class="p-4 cursor-pointer hover:bg-white/5 transition-colors active:bg-white/10">
                                 <div class="flex items-start justify-between mb-3">
                                     <div class="flex items-center gap-3">
                                         <div class="w-10 h-10 rounded-xl flex items-center justify-center" :class="getStatusBgClass(election.status)">
@@ -533,11 +533,11 @@
                                     <span class="text-gray-400">{{ getVotingModeLabel(election.voting_mode) }}</span>
                                     <div class="flex items-center gap-2">
                                         <span class="text-gray-500">{{ formatDate(election.start_time) }}</span>
-                                        <button @click="editElection(election)" class="p-1.5 rounded-lg hover:bg-white/10 text-primary-400" title="수정">
+                                        <div class="p-1.5 text-primary-400">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                                             </svg>
-                                        </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -728,30 +728,45 @@
                 <div class="p-5 lg:p-6" v-if="editingElection">
                     <div class="flex flex-col lg:flex-row gap-6">
                         <!-- 왼쪽: 기본 정보 -->
-                        <div class="lg:w-72 flex-shrink-0 space-y-4">
+                        <div class="flex-1 min-w-0 space-y-4">
                             <h4 class="font-semibold text-white">선거 정보</h4>
                             <div class="space-y-3">
-                                <input v-model="editingElection.title" type="text" placeholder="선거 제목"
-                                       class="w-full bg-dark-900 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary-500/50">
-                                <textarea v-model="editingElection.description" rows="2" placeholder="설명"
-                                          class="w-full bg-dark-900 border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:border-primary-500/50 resize-none"></textarea>
-                                <select v-model="editingElection.status"
-                                        class="w-full bg-dark-900 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary-500/50">
-                                    <option value="draft">초안</option>
-                                    <option value="pending">대기중</option>
-                                    <option value="active">진행중</option>
-                                    <option value="completed">완료</option>
-                                </select>
-                                <select v-model="editingElection.voting_mode"
-                                        class="w-full bg-dark-900 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary-500/50">
-                                    <option value="single">1인 1투표</option>
-                                    <option value="multi_limited">복수 투표</option>
-                                    <option value="periodic_reset">주기적 리셋</option>
-                                </select>
-                                <label class="flex items-center gap-2 p-3 bg-dark-900 rounded-lg cursor-pointer">
-                                    <input type="checkbox" v-model="editingElection.is_star_vote" class="w-4 h-4 rounded">
-                                    <span class="text-sm">⭐ 스타 투표</span>
-                                </label>
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1.5 font-medium">선거명</label>
+                                    <input v-model="editingElection.title" type="text" placeholder="선거 제목"
+                                           class="w-full bg-dark-900 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary-500/50">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1.5 font-medium">설명</label>
+                                    <textarea v-model="editingElection.description" rows="2" placeholder="선거에 대한 설명을 입력하세요"
+                                              class="w-full bg-dark-900 border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:border-primary-500/50 resize-none"></textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1.5 font-medium">상태</label>
+                                    <select v-model="editingElection.status"
+                                            class="w-full bg-dark-900 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary-500/50">
+                                        <option value="draft">초안</option>
+                                        <option value="pending">대기중</option>
+                                        <option value="active">진행중</option>
+                                        <option value="completed">완료</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1.5 font-medium">투표 방식</label>
+                                    <select v-model="editingElection.voting_mode"
+                                            class="w-full bg-dark-900 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary-500/50">
+                                        <option value="single">1인 1투표</option>
+                                        <option value="multi_limited">복수 투표</option>
+                                        <option value="periodic_reset">주기적 리셋</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1.5 font-medium">투표 유형</label>
+                                    <label class="flex items-center gap-2 p-3 bg-dark-900 rounded-lg cursor-pointer">
+                                        <input type="checkbox" v-model="editingElection.is_star_vote" class="w-4 h-4 rounded">
+                                        <span class="text-sm">⭐ 스타 투표</span>
+                                    </label>
+                                </div>
                             </div>
                         </div>
 
@@ -763,7 +778,8 @@
                             </div>
                             <div class="space-y-2 max-h-[60vh] overflow-y-auto">
                                 <div v-for="(candidate, index) in editingElection.candidates" :key="index"
-                                     class="flex items-center gap-3 p-3 bg-dark-900 rounded-xl">
+                                     @click="openEditCandidateDetail(index)"
+                                     class="flex items-center gap-3 p-3 bg-dark-900 rounded-xl cursor-pointer hover:bg-dark-850 transition-colors group">
                                     <!-- 사진 -->
                                     <img v-if="candidate.image" :src="candidate.image" class="w-12 h-12 rounded-lg object-cover flex-shrink-0">
                                     <div v-else class="w-12 h-12 bg-primary-600/20 rounded-lg flex items-center justify-center text-primary-400 font-bold flex-shrink-0">
@@ -771,27 +787,21 @@
                                     </div>
                                     <!-- 이름/소속 -->
                                     <div class="flex-1 min-w-0">
-                                        <input v-model="candidate.name" type="text" placeholder="이름"
-                                               class="w-full bg-transparent border-b border-white/10 px-1 py-1 text-white text-sm focus:outline-none focus:border-primary-500">
-                                        <input v-model="candidate.party" type="text" placeholder="소속"
-                                               class="w-full bg-transparent border-b border-white/10 px-1 py-1 text-gray-400 text-xs focus:outline-none focus:border-primary-500">
+                                        <div class="text-white text-sm font-medium truncate">{{ candidate.name || '이름 없음' }}</div>
+                                        <div class="text-gray-400 text-xs truncate">{{ candidate.party || '소속 없음' }}</div>
                                     </div>
                                     <!-- 미디어 아이콘 -->
                                     <div class="flex gap-1 text-xs text-gray-500">
-                                        <span v-if="candidate.video">🎬</span>
-                                        <span v-if="candidate.gallery?.length">🖼️</span>
+                                        <span v-if="candidate.video" title="동영상">🎬</span>
+                                        <span v-if="candidate.gallery?.length" title="갤러리">🖼️{{ candidate.gallery.length }}</span>
+                                        <span v-if="candidate.bio" title="소개글">📝</span>
                                     </div>
-                                    <!-- 버튼 -->
-                                    <button @click="openEditCandidateDetail(index)" class="p-2 text-primary-400 hover:bg-white/5 rounded-lg" title="미디어 편집">
+                                    <!-- 편집 아이콘 -->
+                                    <div class="p-2 text-gray-500 group-hover:text-primary-400 transition-colors">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5l7 7-7 7"/>
                                         </svg>
-                                    </button>
-                                    <button @click="removeEditCandidate(index)" class="p-2 text-red-400 hover:bg-white/5 rounded-lg" title="삭제">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12"/>
-                                        </svg>
-                                    </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -926,13 +936,21 @@
                         </div>
                     </div>
                 </div>
-                <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/5 sticky bottom-0 bg-dark-800">
-                    <button @click="showCandidateModal = false" class="px-5 py-2.5 rounded-xl font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors">
-                        취소
+                <div class="flex items-center justify-between px-6 py-4 border-t border-white/5 sticky bottom-0 bg-dark-800">
+                    <button @click="removeCandidateFromDetail" class="px-5 py-2.5 rounded-xl font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                        <span>삭제</span>
                     </button>
-                    <button @click="saveCandidateDetail" class="btn-primary text-white px-6 py-2.5 rounded-xl font-medium">
-                        저장
-                    </button>
+                    <div class="flex items-center gap-3">
+                        <button @click="showCandidateModal = false" class="px-5 py-2.5 rounded-xl font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors">
+                            취소
+                        </button>
+                        <button @click="saveCandidateDetail" class="btn-primary text-white px-6 py-2.5 rounded-xl font-medium">
+                            저장
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1425,6 +1443,19 @@
                     editingElection.value.candidates.splice(index, 1);
                 };
 
+                const removeCandidateFromDetail = () => {
+                    if (editingCandidateIndex.value >= 0) {
+                        const candidateName = editingCandidate.value?.name || '후보자';
+                        if (confirm(`${candidateName}를 삭제하시겠습니까?`)) {
+                            removeEditCandidate(editingCandidateIndex.value);
+                            showCandidateModal.value = false;
+                            editingCandidate.value = null;
+                            editingCandidateIndex.value = -1;
+                            showToast('후보자가 삭제되었습니다', 'success');
+                        }
+                    }
+                };
+
                 const openEditCandidateDetail = (index) => {
                     editingCandidateIndex.value = index;
                     const candidate = editingElection.value.candidates[index];
@@ -1587,6 +1618,7 @@
                     saveElection,
                     addEditCandidate,
                     removeEditCandidate,
+                    removeCandidateFromDetail,
                     openEditCandidateDetail,
                     getStatusLabel,
                     getStatusClass,
