@@ -190,22 +190,30 @@
         <!-- Header -->
         <header class="fixed top-0 left-0 right-0 z-50 safe-top">
             <div class="glass border-b border-white/10">
-                <div class="flex items-center justify-between px-4 h-14">
-                    <button v-if="currentView !== 'home'" @click="goBack" class="p-2 -ml-2 rounded-full active:bg-white/10">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-                        </svg>
-                    </button>
-                    <div v-else class="flex items-center gap-2">
-                        <div class="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg flex items-center justify-center">
+                <div class="flex items-center px-4 h-14">
+                    <!-- 왼쪽: 뒤로가기 또는 로고 -->
+                    <div class="w-12 flex-shrink-0">
+                        <button v-if="currentView !== 'home'" @click="goBack" class="p-2 -ml-2 rounded-full active:bg-white/10">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                            </svg>
+                        </button>
+                        <div v-else class="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg flex items-center justify-center">
                             <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
                             </svg>
                         </div>
-                        <span class="font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">VoteChain</span>
                     </div>
-                    <h1 class="absolute left-1/2 -translate-x-1/2 font-semibold">{{ headerTitle }}</h1>
-                    <div class="w-10"></div>
+                    <!-- 가운데: 제목 -->
+                    <div class="flex-1 text-center">
+                        <h1 v-if="currentView !== 'home'" class="font-semibold truncate">{{ headerTitle }}</h1>
+                        <span v-else class="font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">VoteChain</span>
+                    </div>
+                    <!-- 오른쪽: 실시간 상태 -->
+                    <div class="w-12 flex-shrink-0 flex items-center justify-end gap-1.5">
+                        <span class="w-2 h-2 rounded-full pulse" :class="isConnected ? 'bg-green-400' : 'bg-yellow-400'"></span>
+                        <span class="text-xs" :class="isConnected ? 'text-green-400' : 'text-yellow-400'">LIVE</span>
+                    </div>
                 </div>
             </div>
         </header>
@@ -231,7 +239,7 @@
                         <div class="text-right">
                             <div class="flex items-center gap-1 justify-end">
                                 <span class="text-2xl">👑</span>
-                                <span class="text-2xl font-black text-yellow-400">{{ userCrowns }}</span>
+                                <span class="text-2xl font-black text-yellow-400">{{ userCrowns.toLocaleString() }}</span>
                             </div>
                             <p class="text-xs text-gray-500">보유 크라운</p>
                         </div>
@@ -408,11 +416,11 @@
                             <div class="flex items-center justify-between text-xs mb-1.5">
                                 <div class="flex items-center gap-1">
                                     <span>🗳️</span>
-                                    <span class="font-bold text-purple-400">{{ formatNumber(candidate.votes || 0) }}표</span>
+                                    <span class="font-bold text-purple-400">{{ (candidate.votes || 0).toLocaleString() }}표</span>
                                 </div>
                                 <div class="flex items-center gap-1">
                                     <span>👑</span>
-                                    <span class="font-bold text-yellow-400">{{ formatNumber(candidate.crowns || 0) }}</span>
+                                    <span class="font-bold text-yellow-400">{{ (candidate.crowns || 0).toLocaleString() }}</span>
                                 </div>
                             </div>
                             <!-- 득표율 바 -->
@@ -474,7 +482,7 @@
                                 <div class="flex items-center gap-3">
                                     <span class="text-3xl">🗳️</span>
                                     <div>
-                                        <p class="text-2xl font-black text-purple-400">{{ formatNumber(starModalCandidate?.votes || 0) }}표</p>
+                                        <p class="text-2xl font-black text-purple-400">{{ (starModalCandidate?.votes || 0).toLocaleString() }}표</p>
                                         <p class="text-xs text-gray-500">득표수</p>
                                     </div>
                                 </div>
@@ -488,7 +496,7 @@
                                 <div class="flex items-center gap-3">
                                     <span class="text-3xl">👑</span>
                                     <div>
-                                        <p class="text-2xl font-black text-yellow-400">{{ formatNumber(starModalCandidate?.crowns || 0) }}</p>
+                                        <p class="text-2xl font-black text-yellow-400">{{ (starModalCandidate?.crowns || 0).toLocaleString() }}</p>
                                         <p class="text-xs text-gray-500">받은 크라운</p>
                                     </div>
                                 </div>
@@ -515,7 +523,7 @@
                                     👑 100개
                                 </button>
                             </div>
-                            <p class="text-center text-xs text-gray-500 mt-2">내 크라운: {{ userCrowns }}개</p>
+                            <p class="text-center text-xs text-gray-500 mt-2">내 크라운: {{ userCrowns.toLocaleString() }}개</p>
                         </div>
                         <!-- Profile -->
                         <div>
@@ -1066,6 +1074,16 @@
                         }
                     }
 
+                    // WebSocket으로 전송 (연결되어 있으면)
+                    if (wsConnection.value && wsConnection.value.readyState === WebSocket.OPEN) {
+                        wsConnection.value.send(JSON.stringify({
+                            type: 'crown',
+                            candidateId: candidate.id,
+                            amount: amount,
+                            userId: userId.value
+                        }));
+                    }
+
                     // 애니메이션 효과
                     confetti({
                         particleCount: Math.min(amount * 2, 100),
@@ -1123,8 +1141,105 @@
                     });
                 };
 
+                // WebSocket 연결 및 실시간 업데이트
+                const wsConnection = ref(null);
+                const isConnected = ref(false);
+
+                const connectWebSocket = () => {
+                    const wsUrl = 'ws://localhost:8000/ws/crowns';
+                    try {
+                        wsConnection.value = new WebSocket(wsUrl);
+
+                        wsConnection.value.onopen = () => {
+                            console.log('WebSocket 연결됨');
+                            isConnected.value = true;
+                        };
+
+                        wsConnection.value.onmessage = (event) => {
+                            const data = JSON.parse(event.data);
+                            handleRealtimeUpdate(data);
+                        };
+
+                        wsConnection.value.onclose = () => {
+                            console.log('WebSocket 연결 끊김, 시뮬레이션 모드로 전환');
+                            isConnected.value = false;
+                            // 연결 실패시 시뮬레이션 모드
+                            startSimulation();
+                        };
+
+                        wsConnection.value.onerror = () => {
+                            console.log('WebSocket 오류, 시뮬레이션 모드로 전환');
+                            isConnected.value = false;
+                            startSimulation();
+                        };
+                    } catch (e) {
+                        console.log('WebSocket 연결 실패, 시뮬레이션 모드로 전환');
+                        startSimulation();
+                    }
+                };
+
+                // 실시간 업데이트 처리
+                const handleRealtimeUpdate = (data) => {
+                    const starElection = elections.value.find(e => e.is_star_vote);
+                    if (!starElection) return;
+
+                    if (data.type === 'crown') {
+                        const candidate = starElection.candidates.find(c => c.id === data.candidateId);
+                        if (candidate) {
+                            candidate.crowns = (candidate.crowns || 0) + data.amount;
+                            // 모달 열려있으면 업데이트
+                            if (starModalCandidate.value && starModalCandidate.value.id === data.candidateId) {
+                                starModalCandidate.value.crowns = candidate.crowns;
+                            }
+                        }
+                    } else if (data.type === 'vote') {
+                        const candidate = starElection.candidates.find(c => c.id === data.candidateId);
+                        if (candidate) {
+                            candidate.votes = (candidate.votes || 0) + 1;
+                            if (starModalCandidate.value && starModalCandidate.value.id === data.candidateId) {
+                                starModalCandidate.value.votes = candidate.votes;
+                            }
+                        }
+                    }
+                };
+
+                // 시뮬레이션 모드 (백엔드 없을 때 데모용)
+                const simulationInterval = ref(null);
+                const startSimulation = () => {
+                    if (simulationInterval.value) return;
+
+                    simulationInterval.value = setInterval(() => {
+                        const starElection = elections.value.find(e => e.is_star_vote);
+                        if (!starElection) return;
+
+                        // 랜덤 후보에게 크라운 추가
+                        const randomIndex = Math.floor(Math.random() * starElection.candidates.length);
+                        const candidate = starElection.candidates[randomIndex];
+                        const amount = [1, 1, 1, 5, 10, 10, 50, 100][Math.floor(Math.random() * 8)];
+
+                        candidate.crowns = (candidate.crowns || 0) + amount;
+
+                        // 모달 열려있으면 업데이트
+                        if (starModalCandidate.value && starModalCandidate.value.id === candidate.id) {
+                            starModalCandidate.value.crowns = candidate.crowns;
+                        }
+
+                        // 가끔 투표도 추가 (20% 확률)
+                        if (Math.random() < 0.2) {
+                            const voteIndex = Math.floor(Math.random() * starElection.candidates.length);
+                            const voteCandidate = starElection.candidates[voteIndex];
+                            voteCandidate.votes = (voteCandidate.votes || 0) + 1;
+                            if (starModalCandidate.value && starModalCandidate.value.id === voteCandidate.id) {
+                                starModalCandidate.value.votes = voteCandidate.votes;
+                            }
+                        }
+                    }, 2000 + Math.random() * 3000); // 2~5초 간격
+                };
+
                 onMounted(() => {
                     initParticles();
+                    // WebSocket 연결 시도 (실패하면 자동으로 시뮬레이션)
+                    connectWebSocket();
                 });
 
                 return {
@@ -1167,7 +1282,8 @@
                     formatNumber,
                     getCrownPercent,
                     getVotePercent,
-                    sendCrown
+                    sendCrown,
+                    isConnected
                 };
             }
         }).mount('#app');
