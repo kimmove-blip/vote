@@ -223,9 +223,17 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                             </svg>
                         </div>
-                        <div>
+                        <div class="flex-1">
                             <p class="text-gray-400 text-sm">안녕하세요</p>
                             <p class="text-2xl font-bold">{{ userName }}님</p>
+                        </div>
+                        <!-- 크라운 잔액 -->
+                        <div class="text-right">
+                            <div class="flex items-center gap-1 justify-end">
+                                <span class="text-2xl">👑</span>
+                                <span class="text-2xl font-black text-yellow-400">{{ userCrowns }}</span>
+                            </div>
+                            <p class="text-xs text-gray-500">보유 크라운</p>
                         </div>
                     </div>
                     <div class="flex items-center justify-between pt-4 border-t border-white/10">
@@ -395,8 +403,26 @@
                                 <p class="text-xs text-gray-300">{{ candidate.party }}</p>
                             </div>
                         </div>
+                        <!-- 투표수 & 크라운 -->
+                        <div class="px-3 pt-2">
+                            <div class="flex items-center justify-between text-xs mb-1.5">
+                                <div class="flex items-center gap-1">
+                                    <span>🗳️</span>
+                                    <span class="font-bold text-purple-400">{{ formatNumber(candidate.votes || 0) }}표</span>
+                                </div>
+                                <div class="flex items-center gap-1">
+                                    <span>👑</span>
+                                    <span class="font-bold text-yellow-400">{{ formatNumber(candidate.crowns || 0) }}</span>
+                                </div>
+                            </div>
+                            <!-- 득표율 바 -->
+                            <div class="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                <div class="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-500"
+                                     :style="{width: getVotePercent(candidate) + '%'}"></div>
+                            </div>
+                        </div>
                         <!-- Vote button -->
-                        <div class="p-3">
+                        <div class="p-3 pt-2">
                             <button @click.stop="toggleCandidate(candidate)"
                                     class="w-full py-2.5 rounded-xl font-semibold text-sm transition-all"
                                     :class="isSelected(candidate) ? 'bg-gradient-to-r from-pink-500 to-purple-600' : 'bg-white/10 hover:bg-white/20'">
@@ -441,6 +467,56 @@
                     </div>
                     <!-- Content -->
                     <div class="p-5 space-y-5 bg-gradient-to-b from-black to-gray-900">
+                        <!-- 실시간 투표 & 크라운 현황 -->
+                        <div class="glass rounded-2xl p-4">
+                            <!-- 투표수 현황 -->
+                            <div class="flex items-center justify-between mb-4 pb-4 border-b border-white/10">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-3xl">🗳️</span>
+                                    <div>
+                                        <p class="text-2xl font-black text-purple-400">{{ formatNumber(starModalCandidate?.votes || 0) }}표</p>
+                                        <p class="text-xs text-gray-500">득표수</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-2xl font-black text-purple-400">{{ getVotePercent(starModalCandidate) }}%</p>
+                                    <p class="text-xs text-gray-500">득표율</p>
+                                </div>
+                            </div>
+                            <!-- 크라운 현황 -->
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-3xl">👑</span>
+                                    <div>
+                                        <p class="text-2xl font-black text-yellow-400">{{ formatNumber(starModalCandidate?.crowns || 0) }}</p>
+                                        <p class="text-xs text-gray-500">받은 크라운</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-2xl font-black text-yellow-400">{{ getCrownPercent(starModalCandidate) }}%</p>
+                                    <p class="text-xs text-gray-500">크라운 점유율</p>
+                                </div>
+                            </div>
+                            <!-- 크라운 쏘기 버튼들 -->
+                            <div class="flex gap-2">
+                                <button @click="sendCrown(starModalCandidate, 1)"
+                                        :disabled="userCrowns < 1"
+                                        class="flex-1 py-3 rounded-xl bg-gradient-to-r from-yellow-500 to-amber-600 font-bold text-sm disabled:opacity-50 disabled:grayscale transition-all active:scale-95">
+                                    👑 1개
+                                </button>
+                                <button @click="sendCrown(starModalCandidate, 10)"
+                                        :disabled="userCrowns < 10"
+                                        class="flex-1 py-3 rounded-xl bg-gradient-to-r from-yellow-400 to-orange-500 font-bold text-sm disabled:opacity-50 disabled:grayscale transition-all active:scale-95">
+                                    👑 10개
+                                </button>
+                                <button @click="sendCrown(starModalCandidate, 100)"
+                                        :disabled="userCrowns < 100"
+                                        class="flex-1 py-3 rounded-xl bg-gradient-to-r from-amber-400 to-red-500 font-bold text-sm disabled:opacity-50 disabled:grayscale transition-all active:scale-95">
+                                    👑 100개
+                                </button>
+                            </div>
+                            <p class="text-center text-xs text-gray-500 mt-2">내 크라운: {{ userCrowns }}개</p>
+                        </div>
                         <!-- Profile -->
                         <div>
                             <h4 class="text-sm font-bold text-gray-400 mb-2">프로필</h4>
@@ -666,6 +742,7 @@
                 const currentView = ref('home');
                 const userName = ref('홍길동');
                 const userId = ref('a1b2c3d4e5f6g7h8');
+                const userCrowns = ref(500);
                 const submitting = ref(false);
                 const showBiometric = ref(false);
 
@@ -724,7 +801,7 @@
                         end_time: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
                         is_star_vote: true,
                         candidates: [
-                            { id: 10, symbol_number: 1, name: '김태연', party: 'STELLAR',
+                            { id: 10, symbol_number: 1, name: '김태연', party: 'STELLAR', crowns: 15234, votes: 3842,
                               image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=600&fit=crop',
                               video: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
                               bio: '2019년 데뷔 이후 꾸준한 사랑을 받고 있는 STELLAR의 메인보컬. 뛰어난 가창력과 무대 장악력으로 많은 팬들의 사랑을 받고 있습니다.',
@@ -733,14 +810,14 @@
                                 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop',
                                 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=200&h=200&fit=crop',
                               ] },
-                            { id: 11, symbol_number: 2, name: '박준혁', party: 'NOVA',
+                            { id: 11, symbol_number: 2, name: '박준혁', party: 'NOVA', crowns: 12891, votes: 3215,
                               image: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=600&fit=crop',
                               bio: 'NOVA의 리더이자 메인댄서. 칼군무와 파워풀한 퍼포먼스로 유명합니다.',
                               gallery: [
                                 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=200&h=200&fit=crop',
                                 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop',
                               ] },
-                            { id: 12, symbol_number: 3, name: '이서연', party: 'BLOOM',
+                            { id: 12, symbol_number: 3, name: '이서연', party: 'BLOOM', crowns: 11567, votes: 2987,
                               image: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=400&h=600&fit=crop',
                               video: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
                               bio: 'BLOOM의 비주얼 담당. 모델 출신으로 뛰어난 비주얼과 연기력을 겸비했습니다.',
@@ -749,26 +826,26 @@
                                 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=200&h=200&fit=crop',
                                 'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?w=200&h=200&fit=crop',
                               ] },
-                            { id: 13, symbol_number: 4, name: '정우진', party: 'ECLIPSE',
+                            { id: 13, symbol_number: 4, name: '정우진', party: 'ECLIPSE', crowns: 9874, votes: 2654,
                               image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=600&fit=crop',
                               bio: 'ECLIPSE의 메인래퍼. 작사작곡 실력도 뛰어납니다.' },
-                            { id: 14, symbol_number: 5, name: '한소희', party: 'PRISM',
+                            { id: 14, symbol_number: 5, name: '한소희', party: 'PRISM', crowns: 8765, votes: 2341,
                               image: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=400&h=600&fit=crop',
                               bio: 'PRISM의 메인보컬. 감성적인 음색으로 사랑받고 있습니다.',
                               gallery: [
                                 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&h=200&fit=crop',
                                 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop',
                               ] },
-                            { id: 15, symbol_number: 6, name: '최민수', party: 'ZENITH',
+                            { id: 15, symbol_number: 6, name: '최민수', party: 'ZENITH', crowns: 7654, votes: 2108,
                               image: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=400&h=600&fit=crop',
                               bio: 'ZENITH의 막내. 귀여운 매력과 뛰어난 예능감을 가지고 있습니다.' },
-                            { id: 16, symbol_number: 7, name: '강예린', party: 'AURORA',
+                            { id: 16, symbol_number: 7, name: '강예린', party: 'AURORA', crowns: 6543, votes: 1876,
                               image: 'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=400&h=600&fit=crop',
                               bio: 'AURORA의 리더. 작곡가로서도 활발히 활동 중입니다.',
                               gallery: [
                                 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=200&h=200&fit=crop',
                               ] },
-                            { id: 17, symbol_number: 8, name: '윤재현', party: 'ORBIT',
+                            { id: 17, symbol_number: 8, name: '윤재현', party: 'ORBIT', crowns: 5432, votes: 1654,
                               image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=600&fit=crop',
                               bio: 'ORBIT의 메인댄서. 독보적인 춤 실력을 자랑합니다.' },
                         ]
@@ -779,9 +856,11 @@
                     { id: 100, title: '2025년 예산안 승인', status: 'completed' }
                 ]);
 
-                const activeElections = computed(() =>
-                    elections.value.filter(e => e.status === 'active')
-                );
+                const activeElections = computed(() => {
+                    const active = elections.value.filter(e => e.status === 'active');
+                    // 스타투표를 제일 위로
+                    return active.sort((a, b) => (b.is_star_vote ? 1 : 0) - (a.is_star_vote ? 1 : 0));
+                });
 
                 const headerTitle = computed(() => {
                     switch(currentView.value) {
@@ -937,6 +1016,65 @@
                     return '곧 마감';
                 };
 
+                const formatNumber = (num) => {
+                    if (!num) return '0';
+                    if (num >= 10000) return (num / 10000).toFixed(1) + '만';
+                    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+                    return num.toLocaleString();
+                };
+
+                const getTotalCrowns = () => {
+                    const starElection = elections.value.find(e => e.is_star_vote);
+                    if (!starElection) return 0;
+                    return starElection.candidates.reduce((sum, c) => sum + (c.crowns || 0), 0);
+                };
+
+                const getTotalVotes = () => {
+                    const starElection = elections.value.find(e => e.is_star_vote);
+                    if (!starElection) return 0;
+                    return starElection.candidates.reduce((sum, c) => sum + (c.votes || 0), 0);
+                };
+
+                const getCrownPercent = (candidate) => {
+                    if (!candidate) return 0;
+                    const total = getTotalCrowns();
+                    if (total === 0) return 0;
+                    return ((candidate.crowns || 0) / total * 100).toFixed(1);
+                };
+
+                const getVotePercent = (candidate) => {
+                    if (!candidate) return 0;
+                    const total = getTotalVotes();
+                    if (total === 0) return 0;
+                    return ((candidate.votes || 0) / total * 100).toFixed(1);
+                };
+
+                const sendCrown = (candidate, amount) => {
+                    if (userCrowns.value < amount || !candidate) return;
+                    userCrowns.value -= amount;
+
+                    // 원본 데이터에서 후보자 찾아서 업데이트
+                    const starElection = elections.value.find(e => e.is_star_vote);
+                    if (starElection) {
+                        const originalCandidate = starElection.candidates.find(c => c.id === candidate.id);
+                        if (originalCandidate) {
+                            originalCandidate.crowns = (originalCandidate.crowns || 0) + amount;
+                            // 모달 데이터도 업데이트
+                            if (starModalCandidate.value && starModalCandidate.value.id === candidate.id) {
+                                starModalCandidate.value.crowns = originalCandidate.crowns;
+                            }
+                        }
+                    }
+
+                    // 애니메이션 효과
+                    confetti({
+                        particleCount: Math.min(amount * 2, 100),
+                        spread: 60,
+                        origin: { y: 0.7 },
+                        colors: ['#ffd700', '#ffaa00', '#ff8c00']
+                    });
+                };
+
                 // Particle background
                 const initParticles = () => {
                     const canvas = document.getElementById('particles');
@@ -993,6 +1131,7 @@
                     currentView,
                     userName,
                     userId,
+                    userCrowns,
                     submitting,
                     showBiometric,
                     elections,
@@ -1024,7 +1163,11 @@
                     goBack,
                     goHome,
                     getVotingModeLabel,
-                    getRemainingTime
+                    getRemainingTime,
+                    formatNumber,
+                    getCrownPercent,
+                    getVotePercent,
+                    sendCrown
                 };
             }
         }).mount('#app');
