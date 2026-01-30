@@ -911,14 +911,16 @@
                             </div>
                         </div>
                     </div>
-                </div>
-                <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/5 sticky bottom-0 bg-dark-800">
-                    <button @click="showEditModal = false" class="px-5 py-2.5 rounded-xl font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors">
-                        취소
-                    </button>
-                    <button @click="saveElection" class="btn-primary text-white px-6 py-2.5 rounded-xl font-medium">
-                        저장
-                    </button>
+
+                    <!-- Footer -->
+                    <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/5 mt-6 -mx-5 lg:-mx-6 -mb-5 lg:-mb-6">
+                        <button @click="showEditModal = false" class="px-5 py-2.5 rounded-xl font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors">
+                            취소
+                        </button>
+                        <button @click="saveElection" class="btn-primary text-white px-6 py-2.5 rounded-xl font-medium">
+                            저장
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
