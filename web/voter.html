@@ -414,13 +414,13 @@
                 <div class="modal-enter min-h-full">
                     <!-- Media -->
                     <div class="relative">
-                        <div v-if="starModalCandidate?.video" class="aspect-video bg-black">
-                            <video ref="starVideo" :src="starModalCandidate.video"
+                        <div v-if="currentMediaType === 'video'" class="aspect-square bg-black overflow-hidden">
+                            <video ref="starVideo" :src="currentMedia"
                                    controls playsinline autoplay muted
-                                   :poster="starModalCandidate.image"
-                                   class="w-full h-full object-contain bg-black"></video>
+                                   :poster="starModalCandidate?.image"
+                                   class="w-full h-full object-cover"></video>
                         </div>
-                        <img v-else :src="starModalCandidate?.image" class="w-full aspect-[3/4] object-cover">
+                        <img v-else :src="currentMedia" class="w-full aspect-square object-cover">
                         <!-- Close -->
                         <button @click="closeStarModal"
                                 class="absolute top-4 right-4 w-12 h-12 bg-black/60 backdrop-blur rounded-full flex items-center justify-center z-10">
@@ -429,7 +429,7 @@
                             </svg>
                         </button>
                         <!-- Info overlay -->
-                        <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/80 to-transparent p-5">
+                        <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/50 to-transparent p-5 pointer-events-none">
                             <div class="flex items-center gap-2 mb-2">
                                 <span class="px-3 py-1 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full text-sm font-bold">
                                     #{{ starModalCandidate?.symbol_number }}
@@ -447,11 +447,71 @@
                             <p class="text-gray-300 leading-relaxed">{{ starModalCandidate?.bio }}</p>
                         </div>
                         <!-- Gallery -->
-                        <div v-if="starModalCandidate?.gallery?.length">
+                        <div v-if="starModalCandidate?.gallery?.length || starModalCandidate?.video">
                             <h4 class="text-sm font-bold text-gray-400 mb-3">갤러리</h4>
                             <div class="flex gap-2 overflow-x-auto pb-2 -mx-5 px-5">
-                                <img v-for="(img, i) in starModalCandidate.gallery" :key="i"
-                                     :src="img" class="w-28 h-28 rounded-xl object-cover flex-shrink-0">
+                                <!-- 메인 이미지 썸네일 -->
+                                <div @click="setCurrentMedia(starModalCandidate.image, 'image')"
+                                     class="relative flex-shrink-0 cursor-pointer rounded-xl overflow-hidden"
+                                     :class="currentMedia === starModalCandidate.image ? 'ring-2 ring-pink-500' : ''">
+                                    <img :src="starModalCandidate.image" class="w-20 h-20 object-cover">
+                                </div>
+                                <!-- 동영상 썸네일 -->
+                                <div v-if="starModalCandidate?.video"
+                                     @click="setCurrentMedia(starModalCandidate.video, 'video')"
+                                     class="relative flex-shrink-0 cursor-pointer rounded-xl overflow-hidden"
+                                     :class="currentMedia === starModalCandidate.video ? 'ring-2 ring-pink-500' : ''">
+                                    <img :src="starModalCandidate.image" class="w-20 h-20 object-cover">
+                                    <div class="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                        <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                                            <path d="M8 5v14l11-7z"/>
+                                        </svg>
+                                    </div>
+                                </div>
+                                <!-- 갤러리 이미지들 -->
+                                <div v-for="(img, i) in starModalCandidate.gallery" :key="i"
+                                     @click="setCurrentMedia(img, 'image')"
+                                     class="flex-shrink-0 cursor-pointer rounded-xl overflow-hidden"
+                                     :class="currentMedia === img ? 'ring-2 ring-pink-500' : ''">
+                                    <img :src="img" class="w-20 h-20 object-cover">
+                                </div>
+                            </div>
+                        </div>
+                        <!-- 응원 댓글 -->
+                        <div>
+                            <div class="flex items-center justify-between mb-3">
+                                <h4 class="text-sm font-bold text-gray-400">응원 댓글</h4>
+                                <span class="text-xs text-pink-400">{{ getCommentsForCandidate(starModalCandidate?.id).length }}개</span>
+                            </div>
+                            <!-- 댓글 입력 -->
+                            <div class="flex gap-2 mb-4">
+                                <input type="text" v-model="newComment"
+                                       @keyup.enter="addComment(starModalCandidate)"
+                                       placeholder="응원 메시지를 남겨주세요..."
+                                       class="flex-1 bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-sm placeholder-gray-500 focus:outline-none focus:border-pink-500">
+                                <button @click="addComment(starModalCandidate)"
+                                        :disabled="!newComment.trim()"
+                                        class="px-4 py-3 bg-gradient-to-r from-pink-500 to-purple-600 rounded-xl font-semibold text-sm disabled:opacity-50">
+                                    등록
+                                </button>
+                            </div>
+                            <!-- 댓글 목록 -->
+                            <div class="space-y-3 max-h-60 overflow-y-auto">
+                                <div v-for="comment in getCommentsForCandidate(starModalCandidate?.id)" :key="comment.id"
+                                     class="bg-white/5 rounded-xl p-3">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <div class="w-6 h-6 bg-gradient-to-br from-pink-500 to-purple-600 rounded-full flex items-center justify-center text-xs font-bold">
+                                            {{ comment.user.charAt(0) }}
+                                        </div>
+                                        <span class="text-sm font-medium">{{ comment.user }}</span>
+                                        <span class="text-xs text-gray-500">{{ comment.time }}</span>
+                                    </div>
+                                    <p class="text-sm text-gray-300 pl-8">{{ comment.text }}</p>
+                                </div>
+                                <div v-if="getCommentsForCandidate(starModalCandidate?.id).length === 0"
+                                     class="text-center py-6 text-gray-500 text-sm">
+                                    첫 번째 응원 댓글을 남겨보세요!
+                                </div>
                             </div>
                         </div>
                         <!-- Vote button -->
@@ -613,6 +673,17 @@
                 const selectedCandidates = ref([]);
                 const showStarModal = ref(false);
                 const starModalCandidate = ref(null);
+                const currentMedia = ref('');
+                const currentMediaType = ref('image');
+                const newComment = ref('');
+                const comments = ref([
+                    { id: 1, candidateId: 10, user: '별빛팬', text: '태연 언니 최고! 항상 응원해요 💕', time: '5분 전' },
+                    { id: 2, candidateId: 10, user: '스텔라러버', text: '무대 너무 멋있어요 ✨', time: '12분 전' },
+                    { id: 3, candidateId: 10, user: '음악천사', text: '목소리가 정말 천상의 소리...', time: '1시간 전' },
+                    { id: 4, candidateId: 12, user: '블룸팬', text: '서연이 화이팅! 1등하자! 🏆', time: '3분 전' },
+                    { id: 5, candidateId: 12, user: '뷰티퀸', text: '비주얼 진짜 미쳤다...', time: '30분 전' },
+                    { id: 6, candidateId: 11, user: '노바스타', text: '준혁이 춤 너무 잘 춰요!', time: '15분 전' },
+                ]);
 
                 const receiptCode = ref('');
                 const blockNumber = ref(0);
@@ -754,17 +825,43 @@
 
                 const openStarModal = (candidate) => {
                     starModalCandidate.value = candidate;
+                    currentMedia.value = candidate.image;
+                    currentMediaType.value = 'image';
                     showStarModal.value = true;
                 };
 
                 const closeStarModal = () => {
                     showStarModal.value = false;
                     starModalCandidate.value = null;
+                    currentMedia.value = '';
+                    currentMediaType.value = 'image';
+                };
+
+                const setCurrentMedia = (src, type) => {
+                    currentMedia.value = src;
+                    currentMediaType.value = type;
                 };
 
                 const selectStarAndClose = (candidate) => {
                     toggleCandidate(candidate);
                     closeStarModal();
+                };
+
+                const getCommentsForCandidate = (candidateId) => {
+                    if (!candidateId) return [];
+                    return comments.value.filter(c => c.candidateId === candidateId);
+                };
+
+                const addComment = (candidate) => {
+                    if (!newComment.value.trim() || !candidate) return;
+                    comments.value.unshift({
+                        id: Date.now(),
+                        candidateId: candidate.id,
+                        user: userName.value,
+                        text: newComment.value.trim(),
+                        time: '방금 전'
+                    });
+                    newComment.value = '';
                 };
 
                 const goToConfirm = () => {
@@ -905,6 +1002,10 @@
                     selectedCandidates,
                     showStarModal,
                     starModalCandidate,
+                    currentMedia,
+                    currentMediaType,
+                    newComment,
+                    comments,
                     receiptCode,
                     blockNumber,
                     voteTime,
@@ -914,7 +1015,10 @@
                     isSelected,
                     openStarModal,
                     closeStarModal,
+                    setCurrentMedia,
                     selectStarAndClose,
+                    getCommentsForCandidate,
+                    addComment,
                     goToConfirm,
                     submitVote,
                     goBack,
