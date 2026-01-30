@@ -461,15 +461,23 @@
 
         <!-- Detail Modal -->
         <div v-if="showModal"
-             class="fixed inset-0 z-50 flex items-end md:items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+             class="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/90 backdrop-blur-sm overflow-y-auto"
              @click.self="showModal = false">
-            <div class="modal-enter glass rounded-t-3xl md:rounded-3xl w-full max-w-lg max-h-[85vh] overflow-hidden">
+            <div class="modal-enter glass rounded-3xl w-full max-w-2xl max-h-[95vh] overflow-y-auto" style="margin-top: env(safe-area-inset-top, 0px); margin-bottom: env(safe-area-inset-bottom, 0px);">
                 <!-- Media Section -->
                 <div class="relative">
-                    <div v-if="modalCandidate?.video" class="aspect-video bg-black">
-                        <video :src="modalCandidate.video" controls class="w-full h-full object-cover"></video>
+                    <div v-if="modalCandidate?.video && !videoError" class="aspect-video bg-gradient-to-br from-gray-900 to-black">
+                        <video
+                            :src="modalCandidate.video"
+                            controls
+                            playsinline
+                            preload="metadata"
+                            :poster="modalCandidate.image"
+                            @error="handleVideoError"
+                            class="w-full h-full object-contain bg-black">
+                        </video>
                     </div>
-                    <img v-else :src="modalCandidate?.image" class="w-full aspect-square object-cover">
+                    <img v-else :src="modalCandidate?.image" class="w-full aspect-[4/5] object-cover">
                     <button @click="showModal = false"
                             class="absolute top-4 right-4 w-10 h-10 glass rounded-full flex items-center justify-center">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -569,6 +577,7 @@
                 const showVoteSuccess = ref(false);
                 const votedCandidate = ref(null);
                 const remainingDays = ref(15);
+                const videoError = ref(false);
 
                 const candidates = ref([
                     {
@@ -576,7 +585,7 @@
                         name: '김태연',
                         group: 'STELLAR',
                         image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop',
-                        video: 'https://assets.mixkit.co/videos/preview/mixkit-portrait-of-a-fashion-woman-with-silver-makeup-39875-large.mp4',
+                        video: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
                         votes: 1523847,
                         fans: 1,
                         bio: '2019년 데뷔 이후 꾸준한 사랑을 받고 있는 STELLAR의 메인보컬. 뛰어난 가창력과 무대 장악력으로 많은 팬들의 사랑을 받고 있습니다.',
@@ -693,7 +702,12 @@
                 const openModal = (candidate) => {
                     modalCandidate.value = candidate;
                     selectedCandidate.value = candidate;
+                    videoError.value = false;
                     showModal.value = true;
+                };
+
+                const handleVideoError = () => {
+                    videoError.value = true;
                 };
 
                 const selectAndVote = (candidate) => {
@@ -788,10 +802,12 @@
                     showVoteSuccess,
                     votedCandidate,
                     remainingDays,
+                    videoError,
                     formatNumber,
                     getVotePercent,
                     getRank,
                     openModal,
+                    handleVideoError,
                     selectAndVote,
                     vote
                 };

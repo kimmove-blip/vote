@@ -1,26 +1,76 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#5a67f2"/>
-      <stop offset="100%" style="stop-color:#4549e6"/>
+    <!-- Main gradient - pink to purple -->
+    <linearGradient id="mainGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ff6b9d"/>
+      <stop offset="50%" style="stop-color:#c44dff"/>
+      <stop offset="100%" style="stop-color:#6366f1"/>
     </linearGradient>
+    <!-- Gold gradient for crown -->
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffd700"/>
+      <stop offset="50%" style="stop-color:#ffaa00"/>
+      <stop offset="100%" style="stop-color:#ff8c00"/>
+    </linearGradient>
+    <!-- Shine overlay -->
     <linearGradient id="shine" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:rgba(255,255,255,0.2)"/>
+      <stop offset="0%" style="stop-color:rgba(255,255,255,0.4)"/>
+      <stop offset="50%" style="stop-color:rgba(255,255,255,0.1)"/>
       <stop offset="100%" style="stop-color:rgba(255,255,255,0)"/>
     </linearGradient>
+    <!-- Star glow -->
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
   </defs>
+
   <!-- Background -->
-  <rect width="512" height="512" rx="108" fill="url(#bg)"/>
+  <rect width="512" height="512" rx="115" fill="url(#mainGrad)"/>
+
   <!-- Shine overlay -->
-  <rect width="512" height="256" rx="108" fill="url(#shine)"/>
-  <!-- Shield icon -->
-  <g transform="translate(128, 96)">
-    <path d="M128 0C128 0 256 32 256 32C256 32 256 160 256 192C256 256 192 304 128 320C64 304 0 256 0 192C0 160 0 32 0 32C0 32 128 0 128 0Z" fill="rgba(255,255,255,0.15)" stroke="white" stroke-width="12"/>
-    <!-- Checkmark -->
-    <path d="M80 160L112 192L176 128" fill="none" stroke="white" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect width="512" height="280" rx="115" fill="url(#shine)"/>
+
+  <!-- Decorative stars background -->
+  <g fill="rgba(255,255,255,0.15)">
+    <polygon points="80,120 85,135 100,135 88,145 93,160 80,152 67,160 72,145 60,135 75,135" />
+    <polygon points="432,100 436,112 448,112 438,120 442,132 432,125 422,132 426,120 416,112 428,112" />
+    <polygon points="60,380 64,392 76,392 66,400 70,412 60,405 50,412 54,400 44,392 56,392" />
+    <polygon points="452,360 456,372 468,372 458,380 462,392 452,385 442,392 446,380 436,372 448,372" />
+    <polygon points="120,450 123,459 132,459 125,465 128,474 120,469 112,474 115,465 108,459 117,459" />
+    <polygon points="392,440 395,449 404,449 397,455 400,464 392,459 384,464 387,455 380,449 389,449" />
   </g>
-  <!-- V letter accent -->
-  <g transform="translate(340, 340)">
-    <text x="0" y="80" font-family="Arial, sans-serif" font-size="100" font-weight="bold" fill="rgba(255,255,255,0.3)">V</text>
+
+  <!-- Crown -->
+  <g transform="translate(256, 130)" filter="url(#glow)">
+    <path d="M-80,60 L-80,0 L-50,-40 L-25,0 L0,-50 L25,0 L50,-40 L80,0 L80,60 Z"
+          fill="url(#goldGrad)" stroke="#fff" stroke-width="4"/>
+    <!-- Crown jewels -->
+    <circle cx="-50" cy="-20" r="8" fill="#ff6b9d"/>
+    <circle cx="0" cy="-30" r="10" fill="#ff6b9d"/>
+    <circle cx="50" cy="-20" r="8" fill="#ff6b9d"/>
+    <!-- Crown base decoration -->
+    <rect x="-80" y="50" width="160" height="15" rx="4" fill="#ffaa00"/>
   </g>
+
+  <!-- Main star -->
+  <g transform="translate(256, 300)" filter="url(#glow)">
+    <polygon points="0,-100 25,-40 90,-40 38,10 58,75 0,35 -58,75 -38,10 -90,-40 -25,-40"
+             fill="white" stroke="rgba(255,215,0,0.5)" stroke-width="3"/>
+    <!-- Inner star shine -->
+    <polygon points="0,-60 15,-25 55,-25 23,5 35,45 0,20 -35,45 -23,5 -55,-25 -15,-25"
+             fill="rgba(255,255,255,0.3)"/>
+  </g>
+
+  <!-- Heart accents -->
+  <g fill="rgba(255,255,255,0.9)">
+    <path transform="translate(130, 280) scale(0.5)" d="M0,-20 C-20,-40 -50,-20 -50,10 C-50,40 0,60 0,60 C0,60 50,40 50,10 C50,-20 20,-40 0,-20 Z"/>
+    <path transform="translate(382, 280) scale(0.5)" d="M0,-20 C-20,-40 -50,-20 -50,10 C-50,40 0,60 0,60 C0,60 50,40 50,10 C50,-20 20,-40 0,-20 Z"/>
+  </g>
+
+  <!-- Vote text -->
+  <text x="256" y="450" text-anchor="middle" font-family="Arial, sans-serif" font-size="52" font-weight="bold" fill="white" letter-spacing="8">VOTE</text>
 </svg>

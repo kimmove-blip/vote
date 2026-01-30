@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#5a67f2">
+    <meta name="theme-color" content="#0f0f1a">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="VoteChain">
     <link rel="apple-touch-icon" href="icon-192.png">
     <link rel="icon" type="image/svg+xml" href="icon.svg">
@@ -13,6 +13,7 @@
     <title>VoteChain - 투표</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script>
         tailwind.config = {
@@ -21,9 +22,6 @@
                     fontFamily: {
                         sans: ['Pretendard', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'sans-serif'],
                     },
-                    colors: {
-                        primary: { 50: '#f0f4ff', 100: '#e0e9ff', 200: '#c7d6fe', 300: '#a3b8fc', 400: '#7a8ff8', 500: '#5a67f2', 600: '#4549e6', 700: '#3a3bcb', 800: '#3133a4', 900: '#2e3182' },
-                    }
                 },
             },
         }
@@ -32,191 +30,291 @@
         [v-cloak] { display: none; }
         * { -webkit-tap-highlight-color: transparent; }
         body {
+            background: #0f0f1a;
             overscroll-behavior: none;
             -webkit-user-select: none;
             user-select: none;
         }
-        .safe-top {
-            padding-top: env(safe-area-inset-top, 0px);
-            min-height: env(safe-area-inset-top, 0px);
-        }
+
+        .safe-top { padding-top: env(safe-area-inset-top, 0px); }
         .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
-        .pb-safe { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px); }
-        @supports not (padding: env(safe-area-inset-top)) {
-            .safe-top { padding-top: 0; min-height: 0; }
-            .safe-bottom { padding-bottom: 0; }
-            .pb-safe { padding-bottom: 16px; }
+        .pb-safe { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 100px); }
+
+        /* Animated gradient background */
+        .bg-animated {
+            background: linear-gradient(-45deg, #0f0f1a, #1a1a2e, #16213e, #0f0f1a);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
         }
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Glass effect */
+        .glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Glow effects */
+        .glow-blue { box-shadow: 0 0 30px rgba(59, 130, 246, 0.3); }
+        .glow-green { box-shadow: 0 0 30px rgba(16, 185, 129, 0.3); }
+        .glow-purple { box-shadow: 0 0 30px rgba(139, 92, 246, 0.3); }
+        .glow-pink { box-shadow: 0 0 30px rgba(236, 72, 153, 0.3); }
+
+        /* Card effects */
+        .vote-card {
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .vote-card:active {
+            transform: scale(0.98);
+        }
+        .vote-card.selected {
+            border-color: rgba(139, 92, 246, 0.5);
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(59, 130, 246, 0.1) 100%);
+        }
+
+        /* Shine effect */
+        .shine {
+            position: relative;
+            overflow: hidden;
+        }
+        .shine::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                to bottom right,
+                rgba(255, 255, 255, 0) 0%,
+                rgba(255, 255, 255, 0) 40%,
+                rgba(255, 255, 255, 0.08) 50%,
+                rgba(255, 255, 255, 0) 60%,
+                rgba(255, 255, 255, 0) 100%
+            );
+            transform: rotate(45deg);
+            animation: shine 4s infinite;
+        }
+        @keyframes shine {
+            0% { transform: translateX(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) rotate(45deg); }
+        }
+
+        /* Button gradient */
         .btn-vote {
-            background: linear-gradient(135deg, #5a67f2 0%, #4549e6 100%);
-            transition: all 0.2s ease;
+            background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 50%, #3b82f6 100%);
+            background-size: 200% 200%;
+            animation: gradientMove 3s ease infinite;
+            transition: all 0.3s ease;
+        }
+        .btn-vote:hover {
+            transform: scale(1.02);
+            box-shadow: 0 10px 40px rgba(139, 92, 246, 0.4);
         }
         .btn-vote:active {
             transform: scale(0.98);
         }
         .btn-vote:disabled {
-            background: #d1d5db;
+            background: rgba(255, 255, 255, 0.1);
+            box-shadow: none;
         }
-        .candidate-card {
-            transition: all 0.2s ease;
+        @keyframes gradientMove {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
-        .candidate-card.selected {
-            border-color: #5a67f2;
-            background: linear-gradient(135deg, rgba(90, 103, 242, 0.1) 0%, rgba(69, 73, 230, 0.05) 100%);
-        }
-        .check-circle {
-            transition: all 0.2s ease;
-        }
-        .slide-up-enter-active, .slide-up-leave-active {
-            transition: all 0.3s ease;
-        }
-        .slide-up-enter-from, .slide-up-leave-to {
-            transform: translateY(100%);
-            opacity: 0;
-        }
-        .fade-enter-active, .fade-leave-active {
-            transition: opacity 0.2s ease;
-        }
-        .fade-enter-from, .fade-leave-to {
-            opacity: 0;
-        }
-        .progress-ring {
-            transform: rotate(-90deg);
-        }
-        .confetti {
+
+        /* Particle canvas */
+        #particles {
             position: fixed;
-            width: 10px;
-            height: 10px;
-            background: #5a67f2;
-            animation: confetti-fall 3s ease-out forwards;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
         }
-        @keyframes confetti-fall {
-            0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
-            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+
+        /* Progress animation */
+        .progress-bar {
+            animation: progressGrow 0.5s ease-out forwards;
         }
+        @keyframes progressGrow {
+            from { width: 0%; }
+        }
+
+        /* Pulse animation */
+        .pulse {
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Float animation */
+        .float {
+            animation: float 3s ease-in-out infinite;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        /* Modal animation */
+        .modal-enter {
+            animation: modalIn 0.3s ease-out;
+        }
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.95) translateY(20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
     </style>
 </head>
-<body class="bg-gray-50 font-sans">
-    <div id="app" v-cloak class="min-h-screen flex flex-col">
+<body class="font-sans text-white">
+    <canvas id="particles"></canvas>
+
+    <div id="app" v-cloak class="relative z-10 min-h-screen bg-animated">
 
         <!-- Header -->
-        <header class="bg-white border-b border-gray-100 sticky top-0 z-30">
-            <div class="safe-top bg-white"></div>
-            <div class="flex items-center justify-between px-4 h-14">
-                <button v-if="currentView !== 'home'" @click="goBack" class="p-2 -ml-2 rounded-full active:bg-gray-100">
-                    <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-                    </svg>
-                </button>
-                <div v-else class="flex items-center gap-2">
-                    <div class="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center">
-                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+        <header class="fixed top-0 left-0 right-0 z-50 safe-top">
+            <div class="glass border-b border-white/10">
+                <div class="flex items-center justify-between px-4 h-14">
+                    <button v-if="currentView !== 'home'" @click="goBack" class="p-2 -ml-2 rounded-full active:bg-white/10">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                         </svg>
+                    </button>
+                    <div v-else class="flex items-center gap-2">
+                        <div class="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg flex items-center justify-center">
+                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                            </svg>
+                        </div>
+                        <span class="font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">VoteChain</span>
                     </div>
-                    <span class="font-bold text-gray-900">VoteChain</span>
+                    <h1 class="absolute left-1/2 -translate-x-1/2 font-semibold">{{ headerTitle }}</h1>
+                    <div class="w-10"></div>
                 </div>
-                <h1 class="absolute left-1/2 -translate-x-1/2 font-semibold text-gray-900">{{ headerTitle }}</h1>
-                <div class="w-10"></div>
             </div>
         </header>
 
         <!-- Main Content -->
-        <main class="flex-1 overflow-y-auto">
+        <main class="pt-20 pb-safe min-h-screen">
 
-            <!-- Home View - Election List -->
-            <div v-if="currentView === 'home'" class="p-4 space-y-4">
-                <!-- User Info Card -->
-                <div class="bg-gradient-to-r from-primary-500 to-primary-600 rounded-2xl p-5 text-white">
-                    <div class="flex items-center gap-4">
-                        <div class="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center">
-                            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <!-- Home View -->
+            <div v-if="currentView === 'home'" class="px-4 space-y-6">
+                <!-- User Card -->
+                <div class="glass rounded-3xl p-6 shine glow-purple">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-600 rounded-2xl flex items-center justify-center">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                             </svg>
                         </div>
                         <div>
-                            <p class="text-white/70 text-sm">안녕하세요</p>
-                            <p class="text-xl font-bold">{{ userName }}님</p>
+                            <p class="text-gray-400 text-sm">안녕하세요</p>
+                            <p class="text-2xl font-bold">{{ userName }}님</p>
                         </div>
                     </div>
-                    <div class="mt-4 pt-4 border-t border-white/20 flex items-center justify-between">
+                    <div class="flex items-center justify-between pt-4 border-t border-white/10">
                         <div>
-                            <p class="text-white/70 text-xs">DID 인증 완료</p>
-                            <p class="text-sm font-medium">did:votechain:{{ userId.slice(0, 8) }}...</p>
+                            <p class="text-gray-500 text-xs">DID 인증</p>
+                            <p class="text-sm font-mono text-purple-400">did:votechain:{{ userId.slice(0, 8) }}...</p>
                         </div>
-                        <div class="flex items-center gap-1 bg-white/20 px-3 py-1 rounded-full">
-                            <span class="w-2 h-2 bg-green-400 rounded-full"></span>
-                            <span class="text-xs font-medium">인증됨</span>
+                        <div class="flex items-center gap-2 px-3 py-1.5 bg-green-500/20 rounded-full">
+                            <span class="w-2 h-2 bg-green-400 rounded-full pulse"></span>
+                            <span class="text-xs font-medium text-green-400">인증됨</span>
                         </div>
                     </div>
                 </div>
 
                 <!-- Section Title -->
-                <div class="flex items-center justify-between pt-2">
-                    <h2 class="text-lg font-bold text-gray-900">진행 중인 투표</h2>
-                    <span class="text-sm text-gray-500">{{ activeElections.length }}개</span>
+                <div class="flex items-center justify-between">
+                    <h2 class="text-xl font-bold">진행 중인 투표</h2>
+                    <span class="px-3 py-1 glass rounded-full text-sm text-purple-400">{{ activeElections.length }}개</span>
                 </div>
 
                 <!-- Election Cards -->
-                <div v-if="activeElections.length > 0" class="space-y-3">
+                <div v-if="activeElections.length > 0" class="space-y-4">
                     <div v-for="election in activeElections" :key="election.id"
                          @click="selectElection(election)"
-                         class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 active:scale-[0.99] transition-transform">
-                        <div class="flex items-start justify-between mb-3">
+                         class="vote-card glass rounded-2xl p-5 shine cursor-pointer"
+                         :class="election.is_star_vote ? 'glow-pink' : ''">
+                        <div class="flex items-start justify-between mb-4">
                             <div class="flex-1">
-                                <h3 class="font-semibold text-gray-900">{{ election.title }}</h3>
-                                <p class="text-sm text-gray-500 mt-0.5">{{ election.description }}</p>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span v-if="election.is_star_vote" class="text-xl">⭐</span>
+                                    <h3 class="font-bold text-lg">{{ election.title }}</h3>
+                                </div>
+                                <p class="text-gray-400 text-sm">{{ election.description }}</p>
                             </div>
-                            <span class="px-2.5 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">진행중</span>
+                            <span v-if="election.is_star_vote"
+                                  class="px-3 py-1 bg-gradient-to-r from-pink-500 to-purple-500 text-white text-xs font-bold rounded-full">
+                                HOT
+                            </span>
+                            <span v-else class="flex items-center gap-1 px-3 py-1 bg-green-500/20 text-green-400 text-xs font-bold rounded-full">
+                                <span class="w-1.5 h-1.5 bg-green-400 rounded-full pulse"></span>
+                                진행중
+                            </span>
                         </div>
-                        <div class="flex items-center gap-4 text-sm text-gray-500">
-                            <span class="flex items-center gap-1">
+                        <div class="flex items-center gap-4 text-sm text-gray-400 mb-4">
+                            <span class="flex items-center gap-1.5">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
                                 </svg>
                                 후보 {{ election.candidates.length }}명
                             </span>
-                            <span class="flex items-center gap-1">
+                            <span class="flex items-center gap-1.5">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                 </svg>
                                 {{ getRemainingTime(election.end_time) }}
                             </span>
                         </div>
-                        <div class="mt-3 pt-3 border-t border-gray-100">
-                            <div class="flex items-center justify-between">
-                                <span class="text-xs text-gray-400">{{ getVotingModeLabel(election.voting_mode) }}</span>
-                                <span class="text-primary-600 text-sm font-medium flex items-center gap-1">
-                                    투표하기
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                                    </svg>
-                                </span>
-                            </div>
+                        <div class="flex items-center justify-between pt-4 border-t border-white/10">
+                            <span class="text-xs text-gray-500">{{ getVotingModeLabel(election.voting_mode) }}</span>
+                            <span class="text-purple-400 text-sm font-medium flex items-center gap-1">
+                                투표하기
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                </svg>
+                            </span>
                         </div>
                     </div>
                 </div>
 
                 <!-- Empty State -->
-                <div v-else class="bg-white rounded-2xl p-8 text-center shadow-sm border border-gray-100">
-                    <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div v-else class="glass rounded-2xl p-10 text-center">
+                    <div class="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-10 h-10 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                         </svg>
                     </div>
                     <p class="text-gray-500">현재 진행 중인 투표가 없습니다</p>
                 </div>
 
-                <!-- Completed Section -->
+                <!-- Completed Elections -->
                 <div v-if="completedElections.length > 0" class="pt-4">
-                    <h2 class="text-lg font-bold text-gray-900 mb-3">완료된 투표</h2>
+                    <h2 class="text-lg font-bold mb-4 text-gray-400">완료된 투표</h2>
                     <div class="space-y-3">
                         <div v-for="election in completedElections" :key="election.id"
-                             class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 opacity-60">
+                             class="glass rounded-xl p-4 opacity-50">
                             <div class="flex items-center justify-between">
                                 <div>
-                                    <h3 class="font-medium text-gray-700">{{ election.title }}</h3>
-                                    <p class="text-xs text-gray-400 mt-0.5">투표 완료</p>
+                                    <h3 class="font-medium">{{ election.title }}</h3>
+                                    <p class="text-xs text-gray-500">투표 완료</p>
                                 </div>
                                 <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -227,87 +325,178 @@
                 </div>
             </div>
 
-            <!-- Vote View - Candidate Selection -->
-            <div v-if="currentView === 'vote'" class="p-4 pb-32">
+            <!-- Vote View -->
+            <div v-if="currentView === 'vote'" class="px-4 space-y-4">
                 <!-- Election Info -->
-                <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-4">
-                    <h2 class="font-semibold text-gray-900">{{ selectedElection?.title }}</h2>
-                    <p class="text-sm text-gray-500 mt-1">{{ selectedElection?.description }}</p>
-                    <div class="mt-3 flex items-center gap-2 text-xs text-gray-400">
-                        <span class="px-2 py-0.5 bg-gray-100 rounded">{{ getVotingModeLabel(selectedElection?.voting_mode) }}</span>
-                        <span>{{ getRemainingTime(selectedElection?.end_time) }} 남음</span>
+                <div class="glass rounded-2xl p-5 shine">
+                    <h2 class="font-bold text-xl mb-2">{{ selectedElection?.title }}</h2>
+                    <p class="text-gray-400 text-sm mb-3">{{ selectedElection?.description }}</p>
+                    <div class="flex items-center gap-3">
+                        <span class="px-3 py-1 bg-purple-500/20 text-purple-400 text-xs font-medium rounded-full">
+                            {{ getVotingModeLabel(selectedElection?.voting_mode) }}
+                        </span>
+                        <span class="text-xs text-gray-500">{{ getRemainingTime(selectedElection?.end_time) }} 남음</span>
                     </div>
                 </div>
 
-                <!-- Voting Instructions -->
-                <p class="text-sm text-gray-500 mb-4">
+                <!-- Instructions -->
+                <p class="text-gray-400 text-sm px-1">
                     <span v-if="selectedElection?.voting_mode === 'single'">후보 1명을 선택하세요</span>
                     <span v-else-if="selectedElection?.voting_mode === 'multi_limited'">최대 {{ selectedElection?.max_candidates }}명까지 선택 가능</span>
                     <span v-else>투표할 후보를 선택하세요</span>
                 </p>
 
-                <!-- Candidate List -->
-                <div class="space-y-3">
+                <!-- Candidate List - Normal -->
+                <div v-if="!selectedElection?.is_star_vote" class="space-y-3">
                     <div v-for="candidate in selectedElection?.candidates" :key="candidate.id"
                          @click="toggleCandidate(candidate)"
-                         class="candidate-card bg-white rounded-2xl p-4 border-2 border-gray-100 active:scale-[0.99]"
-                         :class="{ 'selected': isSelected(candidate) }">
+                         class="vote-card glass rounded-2xl p-4 cursor-pointer"
+                         :class="{ 'selected glow-purple': isSelected(candidate) }">
                         <div class="flex items-center gap-4">
-                            <!-- Candidate Number -->
-                            <div class="w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold"
-                                 :class="isSelected(candidate) ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-600'">
+                            <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl font-black transition-all"
+                                 :class="isSelected(candidate) ? 'bg-gradient-to-br from-purple-500 to-blue-600' : 'bg-white/10'">
                                 {{ candidate.symbol_number }}
                             </div>
-                            <!-- Candidate Info -->
                             <div class="flex-1">
-                                <p class="font-semibold text-gray-900">{{ candidate.name }}</p>
-                                <p class="text-sm text-gray-500">{{ candidate.party || '무소속' }}</p>
+                                <p class="font-bold text-lg">{{ candidate.name }}</p>
+                                <p class="text-sm text-gray-400">{{ candidate.party || '무소속' }}</p>
                             </div>
-                            <!-- Check Icon -->
-                            <div class="check-circle w-7 h-7 rounded-full border-2 flex items-center justify-center"
-                                 :class="isSelected(candidate) ? 'border-primary-500 bg-primary-500' : 'border-gray-300'">
-                                <svg v-if="isSelected(candidate)" class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div class="w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all"
+                                 :class="isSelected(candidate) ? 'border-purple-500 bg-purple-500' : 'border-gray-600'">
+                                <svg v-if="isSelected(candidate)" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
                                 </svg>
                             </div>
                         </div>
                     </div>
                 </div>
+
+                <!-- Candidate List - Star Vote (with photos) -->
+                <div v-if="selectedElection?.is_star_vote" class="grid grid-cols-2 gap-3">
+                    <div v-for="candidate in selectedElection?.candidates" :key="candidate.id"
+                         class="vote-card glass rounded-2xl overflow-hidden cursor-pointer relative"
+                         :class="{ 'selected glow-pink': isSelected(candidate) }">
+                        <!-- Photo -->
+                        <div class="relative" @click="openStarModal(candidate)">
+                            <img :src="candidate.image" class="w-full aspect-[3/4] object-cover">
+                            <!-- Video icon -->
+                            <div v-if="candidate.video" class="absolute top-2 right-2 w-8 h-8 bg-black/50 rounded-full flex items-center justify-center">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M8 5v14l11-7z"/>
+                                </svg>
+                            </div>
+                            <!-- Rank badge -->
+                            <div class="absolute top-2 left-2 w-8 h-8 bg-gradient-to-br from-pink-500 to-purple-600 rounded-full flex items-center justify-center text-sm font-black">
+                                {{ candidate.symbol_number }}
+                            </div>
+                            <!-- Gradient overlay -->
+                            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-3">
+                                <p class="font-bold text-lg">{{ candidate.name }}</p>
+                                <p class="text-xs text-gray-300">{{ candidate.party }}</p>
+                            </div>
+                        </div>
+                        <!-- Vote button -->
+                        <div class="p-3">
+                            <button @click.stop="toggleCandidate(candidate)"
+                                    class="w-full py-2.5 rounded-xl font-semibold text-sm transition-all"
+                                    :class="isSelected(candidate) ? 'bg-gradient-to-r from-pink-500 to-purple-600' : 'bg-white/10 hover:bg-white/20'">
+                                {{ isSelected(candidate) ? '선택됨 ✓' : '투표하기' }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Star Candidate Detail Modal -->
+            <div v-if="showStarModal"
+                 class="fixed inset-0 z-50 bg-black/95 overflow-y-auto"
+                 style="padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);">
+                <div class="modal-enter min-h-full">
+                    <!-- Media -->
+                    <div class="relative">
+                        <div v-if="starModalCandidate?.video" class="aspect-video bg-black">
+                            <video ref="starVideo" :src="starModalCandidate.video"
+                                   controls playsinline autoplay muted
+                                   :poster="starModalCandidate.image"
+                                   class="w-full h-full object-contain bg-black"></video>
+                        </div>
+                        <img v-else :src="starModalCandidate?.image" class="w-full aspect-[3/4] object-cover">
+                        <!-- Close -->
+                        <button @click="closeStarModal"
+                                class="absolute top-4 right-4 w-12 h-12 bg-black/60 backdrop-blur rounded-full flex items-center justify-center z-10">
+                            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                        <!-- Info overlay -->
+                        <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/80 to-transparent p-5">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="px-3 py-1 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full text-sm font-bold">
+                                    #{{ starModalCandidate?.symbol_number }}
+                                </span>
+                            </div>
+                            <h3 class="text-3xl font-black">{{ starModalCandidate?.name }}</h3>
+                            <p class="text-gray-300">{{ starModalCandidate?.party }}</p>
+                        </div>
+                    </div>
+                    <!-- Content -->
+                    <div class="p-5 space-y-5 bg-gradient-to-b from-black to-gray-900">
+                        <!-- Profile -->
+                        <div>
+                            <h4 class="text-sm font-bold text-gray-400 mb-2">프로필</h4>
+                            <p class="text-gray-300 leading-relaxed">{{ starModalCandidate?.bio }}</p>
+                        </div>
+                        <!-- Gallery -->
+                        <div v-if="starModalCandidate?.gallery?.length">
+                            <h4 class="text-sm font-bold text-gray-400 mb-3">갤러리</h4>
+                            <div class="flex gap-2 overflow-x-auto pb-2 -mx-5 px-5">
+                                <img v-for="(img, i) in starModalCandidate.gallery" :key="i"
+                                     :src="img" class="w-28 h-28 rounded-xl object-cover flex-shrink-0">
+                            </div>
+                        </div>
+                        <!-- Vote button -->
+                        <button @click="selectStarAndClose(starModalCandidate)"
+                                class="w-full py-4 rounded-2xl font-bold text-lg transition-all"
+                                :class="isSelected(starModalCandidate) ? 'bg-gradient-to-r from-green-500 to-emerald-600' : 'bg-gradient-to-r from-pink-500 to-purple-600'">
+                            {{ isSelected(starModalCandidate) ? '선택 완료 ✓' : '이 스타에게 투표하기' }}
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <!-- Confirm View -->
-            <div v-if="currentView === 'confirm'" class="p-4 pb-32">
-                <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 text-center">
-                    <div class="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <svg class="w-8 h-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div v-if="currentView === 'confirm'" class="px-4">
+                <div class="glass rounded-3xl p-6 shine text-center">
+                    <div class="w-20 h-20 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-5 float">
+                        <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
                     </div>
-                    <h2 class="text-xl font-bold text-gray-900 mb-2">투표 확인</h2>
-                    <p class="text-gray-500 mb-6">선택하신 후보가 맞는지 확인해주세요</p>
+                    <h2 class="text-2xl font-black mb-2">투표 확인</h2>
+                    <p class="text-gray-400 mb-6">선택하신 후보가 맞는지 확인해주세요</p>
 
-                    <div class="bg-gray-50 rounded-xl p-4 mb-6">
-                        <p class="text-sm text-gray-500 mb-3">{{ selectedElection?.title }}</p>
+                    <div class="bg-white/5 rounded-2xl p-5 mb-6 text-left">
+                        <p class="text-sm text-gray-500 mb-4">{{ selectedElection?.title }}</p>
                         <div v-for="candidate in selectedCandidates" :key="candidate.id"
-                             class="flex items-center gap-3 py-2">
-                            <div class="w-10 h-10 bg-primary-500 text-white rounded-full flex items-center justify-center font-bold">
+                             class="flex items-center gap-4 py-3 border-b border-white/5 last:border-0">
+                            <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-xl flex items-center justify-center text-xl font-black">
                                 {{ candidate.symbol_number }}
                             </div>
-                            <div class="text-left">
-                                <p class="font-semibold text-gray-900">{{ candidate.name }}</p>
+                            <div>
+                                <p class="font-bold">{{ candidate.name }}</p>
                                 <p class="text-xs text-gray-500">{{ candidate.party || '무소속' }}</p>
                             </div>
                         </div>
                     </div>
 
-                    <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-left">
+                    <div class="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 text-left">
                         <div class="flex gap-3">
-                            <svg class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                             </svg>
                             <div>
-                                <p class="font-medium text-amber-800 text-sm">투표 후 변경 불가</p>
-                                <p class="text-xs text-amber-600 mt-0.5">투표는 블록체인에 영구 기록됩니다</p>
+                                <p class="font-medium text-amber-400 text-sm">투표 후 변경 불가</p>
+                                <p class="text-xs text-amber-400/70 mt-0.5">투표는 블록체인에 영구 기록됩니다</p>
                             </div>
                         </div>
                     </div>
@@ -315,40 +504,40 @@
             </div>
 
             <!-- Success View -->
-            <div v-if="currentView === 'success'" class="p-4 flex flex-col items-center justify-center min-h-[60vh]">
+            <div v-if="currentView === 'success'" class="px-4 flex flex-col items-center justify-center min-h-[70vh]">
                 <div class="text-center">
-                    <div class="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <svg class="w-12 h-12 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="w-28 h-28 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 float">
+                        <svg class="w-14 h-14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                         </svg>
                     </div>
-                    <h2 class="text-2xl font-bold text-gray-900 mb-2">투표 완료!</h2>
-                    <p class="text-gray-500 mb-8">소중한 한 표 감사합니다</p>
+                    <h2 class="text-3xl font-black mb-2">투표 완료!</h2>
+                    <p class="text-gray-400 mb-8">소중한 한 표 감사합니다</p>
 
-                    <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 text-left mb-6">
-                        <p class="text-xs text-gray-400 mb-2">투표 영수증</p>
-                        <div class="space-y-3">
-                            <div class="flex justify-between">
+                    <div class="glass rounded-2xl p-5 text-left mb-6 shine">
+                        <p class="text-xs text-gray-500 mb-4">투표 영수증</p>
+                        <div class="space-y-4">
+                            <div class="flex justify-between items-center">
                                 <span class="text-gray-500">선거</span>
-                                <span class="font-medium text-gray-900">{{ selectedElection?.title }}</span>
+                                <span class="font-medium">{{ selectedElection?.title }}</span>
                             </div>
-                            <div class="flex justify-between">
+                            <div class="flex justify-between items-center">
                                 <span class="text-gray-500">트랜잭션</span>
-                                <span class="font-mono text-xs text-primary-600">{{ receiptCode }}</span>
+                                <span class="font-mono text-sm text-purple-400">{{ receiptCode }}</span>
                             </div>
-                            <div class="flex justify-between">
+                            <div class="flex justify-between items-center">
                                 <span class="text-gray-500">블록</span>
-                                <span class="font-medium text-gray-900">#{{ blockNumber }}</span>
+                                <span class="font-bold text-blue-400">#{{ blockNumber }}</span>
                             </div>
-                            <div class="flex justify-between">
+                            <div class="flex justify-between items-center">
                                 <span class="text-gray-500">시간</span>
-                                <span class="font-medium text-gray-900">{{ voteTime }}</span>
+                                <span class="font-medium">{{ voteTime }}</span>
                             </div>
                         </div>
                     </div>
 
-                    <div class="flex items-center justify-center gap-2 text-sm text-gray-500">
-                        <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="flex items-center justify-center gap-2 text-sm text-green-400">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
                         </svg>
                         블록체인에 안전하게 기록됨
@@ -360,21 +549,21 @@
 
         <!-- Bottom Action Bar -->
         <div v-if="currentView === 'vote' || currentView === 'confirm'"
-             class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 pb-safe">
+             class="fixed bottom-0 left-0 right-0 z-40 glass border-t border-white/10 p-4 safe-bottom">
             <button v-if="currentView === 'vote'"
                     @click="goToConfirm"
                     :disabled="selectedCandidates.length === 0"
-                    class="btn-vote w-full py-4 rounded-2xl text-white font-semibold text-lg disabled:text-gray-400">
+                    class="btn-vote w-full py-4 rounded-2xl font-bold text-lg disabled:text-gray-500">
                 {{ selectedCandidates.length > 0 ? `${selectedCandidates.length}명 선택 완료` : '후보를 선택하세요' }}
             </button>
             <div v-if="currentView === 'confirm'" class="flex gap-3">
                 <button @click="currentView = 'vote'"
-                        class="flex-1 py-4 rounded-2xl border-2 border-gray-200 text-gray-700 font-semibold">
+                        class="flex-1 py-4 rounded-2xl glass border border-white/20 font-semibold">
                     다시 선택
                 </button>
                 <button @click="submitVote"
                         :disabled="submitting"
-                        class="btn-vote flex-[2] py-4 rounded-2xl text-white font-semibold flex items-center justify-center gap-2">
+                        class="btn-vote flex-[2] py-4 rounded-2xl font-bold flex items-center justify-center gap-2">
                     <svg v-if="submitting" class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -385,29 +574,27 @@
         </div>
 
         <div v-if="currentView === 'success'"
-             class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 pb-safe">
-            <button @click="goHome" class="btn-vote w-full py-4 rounded-2xl text-white font-semibold">
+             class="fixed bottom-0 left-0 right-0 z-40 glass border-t border-white/10 p-4 safe-bottom">
+            <button @click="goHome" class="btn-vote w-full py-4 rounded-2xl font-bold text-lg">
                 홈으로 돌아가기
             </button>
         </div>
 
-        <!-- Biometric Auth Modal -->
-        <transition name="fade">
-            <div v-if="showBiometric" class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-                <div class="bg-white rounded-3xl p-8 w-full max-w-sm text-center">
-                    <div class="w-20 h-20 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <svg class="w-10 h-10 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4"/>
-                        </svg>
-                    </div>
-                    <h3 class="text-xl font-bold text-gray-900 mb-2">본인 인증</h3>
-                    <p class="text-gray-500 mb-6">생체 인증으로 본인을 확인합니다</p>
-                    <div class="h-1 bg-gray-100 rounded-full overflow-hidden">
-                        <div class="h-full bg-primary-500 rounded-full animate-pulse" style="width: 60%"></div>
-                    </div>
+        <!-- Biometric Modal -->
+        <div v-if="showBiometric" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div class="modal-enter glass rounded-3xl p-8 w-full max-w-sm text-center">
+                <div class="w-24 h-24 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-5 float">
+                    <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4"/>
+                    </svg>
+                </div>
+                <h3 class="text-2xl font-black mb-2">본인 인증</h3>
+                <p class="text-gray-400 mb-6">생체 인증으로 본인을 확인합니다</p>
+                <div class="h-2 bg-white/10 rounded-full overflow-hidden">
+                    <div class="h-full bg-gradient-to-r from-purple-500 to-blue-500 rounded-full progress-bar" style="width: 60%"></div>
                 </div>
             </div>
-        </transition>
+        </div>
 
     </div>
 
@@ -424,12 +611,13 @@
 
                 const selectedElection = ref(null);
                 const selectedCandidates = ref([]);
+                const showStarModal = ref(false);
+                const starModalCandidate = ref(null);
 
                 const receiptCode = ref('');
                 const blockNumber = ref(0);
                 const voteTime = ref('');
 
-                // Sample data
                 const elections = ref([
                     {
                         id: 1,
@@ -455,11 +643,69 @@
                             { id: 4, symbol_number: 1, name: '찬성', party: '' },
                             { id: 5, symbol_number: 2, name: '반대', party: '' },
                         ]
+                    },
+                    {
+                        id: 3,
+                        title: 'STAR VOTE 2026 - 올해의 스타',
+                        description: '2026년 최고의 스타를 투표로 선정합니다',
+                        voting_mode: 'single',
+                        status: 'active',
+                        end_time: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
+                        is_star_vote: true,
+                        candidates: [
+                            { id: 10, symbol_number: 1, name: '김태연', party: 'STELLAR',
+                              image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=600&fit=crop',
+                              video: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+                              bio: '2019년 데뷔 이후 꾸준한 사랑을 받고 있는 STELLAR의 메인보컬. 뛰어난 가창력과 무대 장악력으로 많은 팬들의 사랑을 받고 있습니다.',
+                              gallery: [
+                                'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=200&h=200&fit=crop',
+                                'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop',
+                                'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=200&h=200&fit=crop',
+                              ] },
+                            { id: 11, symbol_number: 2, name: '박준혁', party: 'NOVA',
+                              image: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=600&fit=crop',
+                              bio: 'NOVA의 리더이자 메인댄서. 칼군무와 파워풀한 퍼포먼스로 유명합니다.',
+                              gallery: [
+                                'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=200&h=200&fit=crop',
+                                'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop',
+                              ] },
+                            { id: 12, symbol_number: 3, name: '이서연', party: 'BLOOM',
+                              image: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=400&h=600&fit=crop',
+                              video: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+                              bio: 'BLOOM의 비주얼 담당. 모델 출신으로 뛰어난 비주얼과 연기력을 겸비했습니다.',
+                              gallery: [
+                                'https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=200&h=200&fit=crop',
+                                'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=200&h=200&fit=crop',
+                                'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?w=200&h=200&fit=crop',
+                              ] },
+                            { id: 13, symbol_number: 4, name: '정우진', party: 'ECLIPSE',
+                              image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=600&fit=crop',
+                              bio: 'ECLIPSE의 메인래퍼. 작사작곡 실력도 뛰어납니다.' },
+                            { id: 14, symbol_number: 5, name: '한소희', party: 'PRISM',
+                              image: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=400&h=600&fit=crop',
+                              bio: 'PRISM의 메인보컬. 감성적인 음색으로 사랑받고 있습니다.',
+                              gallery: [
+                                'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&h=200&fit=crop',
+                                'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop',
+                              ] },
+                            { id: 15, symbol_number: 6, name: '최민수', party: 'ZENITH',
+                              image: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=400&h=600&fit=crop',
+                              bio: 'ZENITH의 막내. 귀여운 매력과 뛰어난 예능감을 가지고 있습니다.' },
+                            { id: 16, symbol_number: 7, name: '강예린', party: 'AURORA',
+                              image: 'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=400&h=600&fit=crop',
+                              bio: 'AURORA의 리더. 작곡가로서도 활발히 활동 중입니다.',
+                              gallery: [
+                                'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=200&h=200&fit=crop',
+                              ] },
+                            { id: 17, symbol_number: 8, name: '윤재현', party: 'ORBIT',
+                              image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=600&fit=crop',
+                              bio: 'ORBIT의 메인댄서. 독보적인 춤 실력을 자랑합니다.' },
+                        ]
                     }
                 ]);
 
                 const completedElections = ref([
-                    { id: 3, title: '2025년 예산안 승인', status: 'completed' }
+                    { id: 100, title: '2025년 예산안 승인', status: 'completed' }
                 ]);
 
                 const activeElections = computed(() =>
@@ -480,6 +726,8 @@
                     selectedElection.value = election;
                     selectedCandidates.value = [];
                     currentView.value = 'vote';
+                    // 스크롤을 상단으로 리셋
+                    window.scrollTo(0, 0);
                 };
 
                 const toggleCandidate = (candidate) => {
@@ -504,6 +752,21 @@
                     return selectedCandidates.value.some(c => c.id === candidate.id);
                 };
 
+                const openStarModal = (candidate) => {
+                    starModalCandidate.value = candidate;
+                    showStarModal.value = true;
+                };
+
+                const closeStarModal = () => {
+                    showStarModal.value = false;
+                    starModalCandidate.value = null;
+                };
+
+                const selectStarAndClose = (candidate) => {
+                    toggleCandidate(candidate);
+                    closeStarModal();
+                };
+
                 const goToConfirm = () => {
                     currentView.value = 'confirm';
                 };
@@ -512,14 +775,11 @@
                     submitting.value = true;
                     showBiometric.value = true;
 
-                    // Simulate biometric auth
                     await new Promise(r => setTimeout(r, 1500));
                     showBiometric.value = false;
 
-                    // Simulate API call
                     await new Promise(r => setTimeout(r, 1000));
 
-                    // Generate receipt
                     receiptCode.value = 'TX' + Math.random().toString(36).substring(2, 10).toUpperCase();
                     blockNumber.value = Math.floor(Math.random() * 10000) + 50000;
                     voteTime.value = new Date().toLocaleString('ko-KR');
@@ -527,7 +787,14 @@
                     submitting.value = false;
                     currentView.value = 'success';
 
-                    // Mark as completed
+                    // Confetti!
+                    confetti({
+                        particleCount: 100,
+                        spread: 70,
+                        origin: { y: 0.6 },
+                        colors: ['#8b5cf6', '#6366f1', '#3b82f6', '#10b981']
+                    });
+
                     const election = elections.value.find(e => e.id === selectedElection.value.id);
                     if (election) {
                         election.status = 'voted';
@@ -548,12 +815,14 @@
                     } else if (currentView.value === 'confirm') {
                         currentView.value = 'vote';
                     }
+                    window.scrollTo(0, 0);
                 };
 
                 const goHome = () => {
                     currentView.value = 'home';
                     selectedElection.value = null;
                     selectedCandidates.value = [];
+                    window.scrollTo(0, 0);
                 };
 
                 const getVotingModeLabel = (mode) => {
@@ -571,6 +840,58 @@
                     return '곧 마감';
                 };
 
+                // Particle background
+                const initParticles = () => {
+                    const canvas = document.getElementById('particles');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = window.innerWidth;
+                    canvas.height = window.innerHeight;
+
+                    const particles = [];
+                    const particleCount = 30;
+
+                    for (let i = 0; i < particleCount; i++) {
+                        particles.push({
+                            x: Math.random() * canvas.width,
+                            y: Math.random() * canvas.height,
+                            radius: Math.random() * 2 + 1,
+                            vx: (Math.random() - 0.5) * 0.3,
+                            vy: (Math.random() - 0.5) * 0.3,
+                            color: ['#8b5cf6', '#6366f1', '#3b82f6'][Math.floor(Math.random() * 3)]
+                        });
+                    }
+
+                    const animate = () => {
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                        particles.forEach(p => {
+                            p.x += p.vx;
+                            p.y += p.vy;
+
+                            if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+                            if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+
+                            ctx.beginPath();
+                            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                            ctx.fillStyle = p.color + '30';
+                            ctx.fill();
+                        });
+
+                        requestAnimationFrame(animate);
+                    };
+
+                    animate();
+
+                    window.addEventListener('resize', () => {
+                        canvas.width = window.innerWidth;
+                        canvas.height = window.innerHeight;
+                    });
+                };
+
+                onMounted(() => {
+                    initParticles();
+                });
+
                 return {
                     currentView,
                     userName,
@@ -582,6 +903,8 @@
                     completedElections,
                     selectedElection,
                     selectedCandidates,
+                    showStarModal,
+                    starModalCandidate,
                     receiptCode,
                     blockNumber,
                     voteTime,
@@ -589,6 +912,9 @@
                     selectElection,
                     toggleCandidate,
                     isSelected,
+                    openStarModal,
+                    closeStarModal,
+                    selectStarAndClose,
                     goToConfirm,
                     submitVote,
                     goBack,
