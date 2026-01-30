@@ -726,7 +726,8 @@
                     </button>
                 </div>
                 <div class="p-5 lg:p-6" v-if="editingElection">
-                    <div class="flex flex-col lg:flex-row gap-6">
+                    <!-- Desktop Layout -->
+                    <div class="hidden lg:flex flex-row gap-6">
                         <!-- 왼쪽: 기본 정보 -->
                         <div class="flex-1 min-w-0 space-y-4">
                             <h4 class="font-semibold text-white">선거 정보</h4>
@@ -800,6 +801,110 @@
                                     <div class="p-2 text-gray-500 group-hover:text-primary-400 transition-colors">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5l7 7-7 7"/>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mobile Accordion Layout -->
+                    <div class="lg:hidden space-y-3">
+                        <!-- 선거 정보 아코디언 -->
+                        <div class="bg-dark-900 rounded-xl overflow-hidden">
+                            <button @click="editElectionInfoOpen = !editElectionInfoOpen" type="button" class="w-full flex items-center justify-between p-4 text-left hover:bg-white/5 transition-colors">
+                                <div class="flex items-center gap-2">
+                                    <svg class="w-5 h-5 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    <h4 class="font-semibold text-white">선거 정보</h4>
+                                </div>
+                                <svg class="w-5 h-5 text-gray-400 transition-transform" :class="{'rotate-180': editElectionInfoOpen}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </button>
+                            <div v-show="editElectionInfoOpen" class="p-4 pt-0 space-y-3">
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1.5 font-medium">선거명</label>
+                                    <input v-model="editingElection.title" type="text" placeholder="선거 제목"
+                                           class="w-full bg-dark-800 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary-500/50">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1.5 font-medium">설명</label>
+                                    <textarea v-model="editingElection.description" rows="2" placeholder="선거에 대한 설명을 입력하세요"
+                                              class="w-full bg-dark-800 border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:border-primary-500/50 resize-none"></textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1.5 font-medium">상태</label>
+                                    <select v-model="editingElection.status"
+                                            class="w-full bg-dark-800 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary-500/50">
+                                        <option value="draft">초안</option>
+                                        <option value="pending">대기중</option>
+                                        <option value="active">진행중</option>
+                                        <option value="completed">완료</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1.5 font-medium">투표 방식</label>
+                                    <select v-model="editingElection.voting_mode"
+                                            class="w-full bg-dark-800 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary-500/50">
+                                        <option value="single">1인 1투표</option>
+                                        <option value="multi_limited">복수 투표</option>
+                                        <option value="periodic_reset">주기적 리셋</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1.5 font-medium">투표 유형</label>
+                                    <label class="flex items-center gap-2 p-3 bg-dark-800 rounded-lg cursor-pointer">
+                                        <input type="checkbox" v-model="editingElection.is_star_vote" class="w-4 h-4 rounded">
+                                        <span class="text-sm">⭐ 스타 투표</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 후보자 목록 아코디언 -->
+                        <div class="bg-dark-900 rounded-xl overflow-hidden">
+                            <button @click="editCandidatesOpen = !editCandidatesOpen" type="button" class="w-full flex items-center justify-between p-4 text-left hover:bg-white/5 transition-colors">
+                                <div class="flex items-center gap-2">
+                                    <svg class="w-5 h-5 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                                    </svg>
+                                    <h4 class="font-semibold text-white">후보자 {{ editingElection.candidates?.length || 0 }}명</h4>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <button @click.stop="addEditCandidate" type="button" class="px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-xs rounded-lg transition-colors">
+                                        + 추가
+                                    </button>
+                                    <svg class="w-5 h-5 text-gray-400 transition-transform" :class="{'rotate-180': editCandidatesOpen}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </div>
+                            </button>
+                            <div v-show="editCandidatesOpen" class="p-4 pt-0 space-y-2 max-h-[50vh] overflow-y-auto">
+                                <div v-for="(candidate, index) in editingElection.candidates" :key="index"
+                                     @click="openEditCandidateDetail(index)"
+                                     class="flex items-center gap-3 p-3 bg-dark-800 rounded-xl cursor-pointer hover:bg-dark-850 transition-colors group">
+                                    <!-- 사진 -->
+                                    <img v-if="candidate.image" :src="candidate.image" class="w-12 h-12 rounded-lg object-cover flex-shrink-0">
+                                    <div v-else class="w-12 h-12 bg-primary-600/20 rounded-lg flex items-center justify-center text-primary-400 font-bold flex-shrink-0">
+                                        {{ candidate.symbol_number }}
+                                    </div>
+                                    <!-- 이름/소속 -->
+                                    <div class="flex-1 min-w-0">
+                                        <div class="text-white text-sm font-medium truncate">{{ candidate.name || '이름 없음' }}</div>
+                                        <div class="text-gray-400 text-xs truncate">{{ candidate.party || '소속 없음' }}</div>
+                                    </div>
+                                    <!-- 미디어 아이콘 -->
+                                    <div class="flex gap-1 text-xs text-gray-500">
+                                        <span v-if="candidate.video" title="동영상">🎬</span>
+                                        <span v-if="candidate.gallery?.length" title="갤러리">🖼️{{ candidate.gallery.length }}</span>
+                                        <span v-if="candidate.bio" title="소개글">📝</span>
+                                    </div>
+                                    <!-- 편집 아이콘 -->
+                                    <div class="p-2 text-gray-500 group-hover:text-primary-400 transition-colors">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                         </svg>
                                     </div>
                                 </div>
@@ -1107,6 +1212,9 @@
                 const editingCandidateIndex = ref(-1);
                 const editingCandidate = ref(null);
                 const isEditMode = ref(false);
+                // Mobile accordion states
+                const editElectionInfoOpen = ref(true);
+                const editCandidatesOpen = ref(true);
                 const loading = ref(true);
                 const submitting = ref(false);
                 const toasts = ref([]);
@@ -1402,6 +1510,9 @@
                     if (!editingElection.value.candidates) {
                         editingElection.value.candidates = [];
                     }
+                    // 모바일 아코디언 상태 초기화
+                    editElectionInfoOpen.value = false;
+                    editCandidatesOpen.value = true;
                     isEditMode.value = true;
                     showEditModal.value = true;
                 };
@@ -1588,6 +1699,8 @@
                     showCandidateModal,
                     editingElection,
                     editingCandidate,
+                    editElectionInfoOpen,
+                    editCandidatesOpen,
                     loading,
                     submitting,
                     toasts,
